@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IOU Tracker</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#1e40af">
+</head>
+<body>
+  <div id="app" class="app">
+    <!-- Header -->
+    <header class="header">
+      <h1 class="text-xl font-bold">IOU Tracker</h1>
+      <button id="menuBtn" class="btn-icon">☰</button>
+    </header>
+
+    <!-- Navigation -->
+    <nav id="nav" class="nav hidden">
+      <a href="#iou" class="nav-link">I Owe (IOU)</a>
+      <a href="#uom" class="nav-link">Owed to Me (UOM)</a>
+      <a href="#stats" class="nav-link">Statistics</a>
+      <a href="#persons" class="nav-link">People</a>
+      <div class="nav-divider"></div>
+      <button id="exportBtn" class="nav-link">Export Data</button>
+      <label class="nav-link">
+        Import Data
+        <input type="file" id="importBtn" accept=".json" class="hidden">
+      </label>
+    </nav>
+
+    <!-- Main Content -->
+    <main id="main" class="main">
+      <!-- Content injected by JavaScript -->
+    </main>
+
+    <!-- Floating Action Button -->
+    <button id="fab" class="fab">+</button>
+
+    <!-- Modal Container -->
+    <div id="modal" class="modal hidden">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 id="modalTitle" class="text-lg font-bold"></h2>
+          <button id="modalClose" class="btn-icon">×</button>
+        </div>
+        <div id="modalBody" class="modal-body"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script type="module" src="app.js"></script>
+</body>
+</html>
