@@ -3,6 +3,7 @@ import { generatePersonId, pickContact, formatPhone, getLast4 } from './contact-
 
 // Global app state
 const app = {
+  version: '1.0.1',  // Update this when pushing changes
   persons: [],
   transactions: [],
   currentView: 'iou',
@@ -17,6 +18,9 @@ async function init() {
   setupEventListeners();
   registerServiceWorker();
   router();
+  
+  // Display version
+  document.getElementById('versionBadge').textContent = `v${app.version}`;
 }
 
 // Load data from database
@@ -789,8 +793,21 @@ async function handleImport(e) {
 async function registerServiceWorker() {
   if ('serviceWorker' in navigator) {
     try {
-      await navigator.serviceWorker.register('./service-worker.js');
+      const registration = await navigator.serviceWorker.register('./service-worker.js');
       console.log('Service Worker registered');
+      
+      // Check for updates
+      registration.addEventListener('updatefound', () => {
+        const newWorker = registration.installing;
+        newWorker.addEventListener('statechange', () => {
+          if (newWorker.state === 'activated' && navigator.serviceWorker.controller) {
+            // New version available
+            if (confirm('New version available! Reload to update?')) {
+              window.location.reload();
+            }
+          }
+        });
+      });
     } catch (err) {
       console.error('Service Worker registration failed:', err);
     }
