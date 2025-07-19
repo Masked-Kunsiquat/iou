@@ -1,4 +1,4 @@
-const CACHE_NAME = 'iou-tracker-v1.0.1';  // Update version here too
+const CACHE_NAME = 'iou-tracker-v1.0.2';  // Update version here too
 const urlsToCache = [
   './',
   './index.html',

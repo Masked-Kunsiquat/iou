@@ -3,7 +3,7 @@ import { generatePersonId, pickContact, formatPhone, getLast4 } from './contact-
 
 // Global app state
 const app = {
-  version: '1.0.1',  // Update this when pushing changes
+  version: '1.0.2',  // Update this when pushing changes
   persons: [],
   transactions: [],
   currentView: 'iou',
