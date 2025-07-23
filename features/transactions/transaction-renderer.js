@@ -117,10 +117,26 @@ export function renderTransactionList(type) {
             const nameA = `${personA.firstName} ${personA.lastName}`;
             const nameB = `${personB.firstName} ${personB.lastName}`;
             return transactionSort.order === 'asc' ? nameA.localeCompare(nameB) : nameB.localeCompare(nameA);
-        } else { // Default to date sort
-            const latestDateA = Math.max(...transactionsByPerson[a].map(t => new Date(t.date).getTime()));
-            const latestDateB = Math.max(...transactionsByPerson[b].map(t => new Date(t.date).getTime()));
-            return transactionSort.order === 'asc' ? latestDateA - latestDateB : latestDateB - latestDateA;
+        } else { // Date-based sorting
+            let dateA, dateB;
+            if (transactionSort.by === 'dueDate') {
+                // Get all valid due dates, convert to timestamps
+                const dueDatesA = transactionsByPerson[a].map(t => t.dueDate ? new Date(t.dueDate).getTime() : null).filter(Boolean);
+                const dueDatesB = transactionsByPerson[b].map(t => t.dueDate ? new Date(t.dueDate).getTime() : null).filter(Boolean);
+                
+                // If a person has no due dates, push them to the end
+                if (dueDatesA.length === 0) return 1;
+                if (dueDatesB.length === 0) return -1;
+                
+                dateA = transactionSort.order === 'asc' ? Math.min(...dueDatesA) : Math.max(...dueDatesA);
+                dateB = transactionSort.order === 'asc' ? Math.min(...dueDatesB) : Math.max(...dueDatesB);
+
+            } else { // Default to transactionDate
+                dateA = Math.max(...transactionsByPerson[a].map(t => new Date(t.date).getTime()));
+                dateB = Math.max(...transactionsByPerson[b].map(t => new Date(t.date).getTime()));
+            }
+
+            return transactionSort.order === 'asc' ? dateA - dateB : dateB - dateA;
         }
     });
     
@@ -145,8 +161,10 @@ export function renderTransactionList(type) {
         <div>
             <label for="sort-by" class="text-sm">Sort by:</label>
             <select id="sort-by" class="select" style="width: auto;">
-                <option value="date_desc" ${transactionSort.by === 'date' && transactionSort.order === 'desc' ? 'selected' : ''}>Date (Newest)</option>
-                <option value="date_asc" ${transactionSort.by === 'date' && transactionSort.order === 'asc' ? 'selected' : ''}>Date (Oldest)</option>
+                <option value="transactionDate_desc" ${transactionSort.by === 'transactionDate' && transactionSort.order === 'desc' ? 'selected' : ''}>Transaction Date (Newest)</option>
+                <option value="transactionDate_asc" ${transactionSort.by === 'transactionDate' && transactionSort.order === 'asc' ? 'selected' : ''}>Transaction Date (Oldest)</option>
+                <option value="dueDate_desc" ${transactionSort.by === 'dueDate' && transactionSort.order === 'desc' ? 'selected' : ''}>Due Date (Newest)</option>
+                <option value="dueDate_asc" ${transactionSort.by === 'dueDate' && transactionSort.order === 'asc' ? 'selected' : ''}>Due Date (Oldest)</option>
                 <option value="name_asc" ${transactionSort.by === 'name' && transactionSort.order === 'asc' ? 'selected' : ''}>Person (A-Z)</option>
                 <option value="name_desc" ${transactionSort.by === 'name' && transactionSort.order === 'desc' ? 'selected' : ''}>Person (Z-A)</option>
             </select>
