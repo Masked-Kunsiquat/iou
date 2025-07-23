@@ -1,7 +1,7 @@
 // features/persons/person-modals.js
 
 import { db } from '../../db.js';
-import { generatePersonId, pickContact } from '../../contact-helper.js';
+import { generatePersonId, pickContact } from './contact-helper.js';
 import { app } from '../../core/state.js';
 import { showModal, closeModal } from '../../ui/modal.js';
 import { showAlert } from '../../ui/notifications.js';

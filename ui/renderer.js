@@ -2,7 +2,7 @@
 
 import { app } from '../core/state.js';
 import { setFabVisibility } from './fab.js';
-import { formatPhone } from '../contact-helper.js';
+import { formatPhone } from '../features/persons/contact-helper.js';
 import { editPerson } from '../features/persons/person-modals.js';
 import { deletePerson } from '../features/actions.js';
 
