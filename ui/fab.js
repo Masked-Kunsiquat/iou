@@ -10,7 +10,12 @@ import { showTransactionModal } from '../features/transactions/transaction-modal
  * Initializes the FAB and its event listener.
  */
 export function initFab() {
-  document.getElementById('fab').addEventListener('click', handleFabClick);
+  const fab = document.getElementById('fab');
+  if (fab) {
+    fab.addEventListener('click', handleFabClick);
+  } else {
+    console.error('Error: The FAB element was not found in the DOM.');
+  }
 }
 
 /**
@@ -31,5 +36,7 @@ function handleFabClick() {
  */
 export function setFabVisibility(visible) {
     const fab = document.getElementById('fab');
-    fab.classList.toggle('hidden', !visible);
+    if (fab) {
+        fab.classList.toggle('hidden', !visible);
+    }
 }
