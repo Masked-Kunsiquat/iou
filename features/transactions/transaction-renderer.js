@@ -5,6 +5,7 @@ import { calculateBalance } from './transaction-utils.js';
 import { showPaymentModal, showTransactionDetails, showEditTransactionModal } from './transaction-modals.js';
 import { deleteTransaction } from '../actions.js';
 import { escapeHTML } from '../../ui/html-sanitizer.js';
+import { formatCurrency } from '../../ui/currency.js';
 
 /**
  * Handles clicks on action buttons within a transaction card.
@@ -44,7 +45,6 @@ function renderTransaction(transaction) {
     const isPaid = balance === 0;
     const isOverdue = transaction.dueDate && new Date(transaction.dueDate) < new Date() && !isPaid;
 
-    // Sanitize user-provided data before rendering to prevent XSS
     const description = escapeHTML(transaction.description || 'No Description');
 
     return `
@@ -60,8 +60,8 @@ function renderTransaction(transaction) {
           </div>
         </div>
         <div class="text-right">
-          <div class="font-bold">${(balance / 100).toFixed(2)}</div>
-          <div class="text-xs text-gray">of ${(transaction.amount / 100).toFixed(2)}</div>
+          <div class="font-bold">${formatCurrency(balance)}</div>
+          <div class="text-xs text-gray">of ${formatCurrency(transaction.amount)}</div>
         </div>
       </div>
       <div class="flex gap-2 mt-2">

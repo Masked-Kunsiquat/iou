@@ -6,6 +6,7 @@ import { showModal, closeModal } from '../../ui/modal.js';
 import { deletePayment } from '../actions.js';
 import { calculateBalance } from './transaction-utils.js';
 import { escapeHTML } from '../../ui/html-sanitizer.js';
+import { formatCurrency } from '../../ui/currency.js';
 
 let loadData;
 
@@ -29,14 +30,16 @@ export function showTransactionModal(type) {
         return `<option value="${p.id}">${firstName} ${lastName}</option>`;
     }).join('');
 
-    showModal(`Add ${type}`, `
+    const modalTitle = `Add ${type.toUpperCase()}`; // Uppercase the type for the title
+
+    showModal(modalTitle, `
     <form id="transactionForm">
       <div class="form-group"><label class="label">Person</label><select name="personId" class="select" required><option value="">Select person...</option>${personOptions}</select></div>
       <div class="form-group"><label class="label">Amount</label><input type="number" step="0.01" name="amount" class="input" placeholder="0.00" required></div>
       <div class="form-group"><label class="label">Description</label><input type="text" name="description" class="input" required></div>
       <div class="form-group"><label class="label">Date</label><input type="date" name="date" class="input" required value="${new Date().toISOString().split('T')[0]}"></div>
       <div class="form-group"><label class="label">Due Date (optional)</label><input type="date" name="dueDate" class="input"></div>
-      <button type="submit" class="btn w-full">Save ${type}</button>
+      <button type="submit" class="btn w-full">Save ${type.toUpperCase()}</button>
     </form>
   `);
 
@@ -73,7 +76,7 @@ export function showPaymentModal(transaction) {
 
     showModal('Record Payment', `
     <form id="paymentForm">
-      <div class="mb-2"><strong>${safePersonName}</strong><br><span class="text-sm text-gray">Balance: ${(balance / 100).toFixed(2)}</span></div>
+      <div class="mb-2"><strong>${safePersonName}</strong><br><span class="text-sm text-gray">Balance: ${formatCurrency(balance)}</span></div>
       <div class="form-group"><label class="label">Amount</label><input type="number" step="0.01" name="amount" class="input" placeholder="0.00" required max="${balance / 100}"></div>
       <div class="form-group"><label class="label">Payment Date</label><input type="date" name="paymentDate" class="input" required value="${new Date().toISOString().split('T')[0]}"></div>
       <div class="form-group"><label class="label">Note (optional)</label><input type="text" name="note" class="input" placeholder="Payment note"></div>
@@ -109,17 +112,16 @@ export function showTransactionDetails(transaction) {
     const person = persons.find(p => p.id === transaction.personId);
     const balance = calculateBalance(transaction);
     
-    // 1. Sanitize all user-provided data before rendering
     const safePersonName = person ? escapeHTML(`${person.firstName} ${person.lastName}`) : 'Unknown Person';
     const safeDescription = escapeHTML(transaction.description || '');
 
     const paymentsHtml = transaction.payments?.map(p => {
-        // 2. Sanitize the payment note to prevent XSS
         const safeNote = p.note ? `<div class="text-xs text-gray">${escapeHTML(p.note)}</div>` : '';
         return `
         <div class="list-item flex-between">
             <div>
-              <div class="text-sm">${(p.amount / 100).toFixed(2)}</div>
+              {/* Use formatCurrency for the payment amount */}
+              <div class="text-sm">${formatCurrency(p.amount)}</div>
               <div class="text-xs text-gray">${new Date(p.date).toLocaleDateString()}</div>
               ${safeNote}
             </div>
@@ -127,12 +129,12 @@ export function showTransactionDetails(transaction) {
         </div>`
     }).join('') || '<p class="text-sm text-gray">No payments yet</p>';
 
-    // 3. Use the sanitized variables in the template literal
     showModal('Transaction Details', `
     <div class="mb-4"><strong>${safePersonName}</strong><br><span class="text-sm text-gray">${safeDescription}</span></div>
     <div class="mb-4">
-      <div class="flex-between mb-2"><span>Original Amount:</span><span>${(transaction.amount / 100).toFixed(2)}</span></div>
-      <div class="flex-between mb-2"><span>Current Balance:</span><span class="font-bold">${(balance / 100).toFixed(2)}</span></div>
+      {/* Use formatCurrency for original amount and balance */}
+      <div class="flex-between mb-2"><span>Original Amount:</span><span>${formatCurrency(transaction.amount)}</span></div>
+      <div class="flex-between mb-2"><span>Current Balance:</span><span class="font-bold">${formatCurrency(balance)}</span></div>
       <div class="flex-between"><span>Status:</span><span class="${transaction.status === 'paid' ? 'text-green' : ''}">${transaction.status}</span></div>
     </div>
     <h3 class="font-bold mb-2">Payment History</h3><div class="list" id="paymentListContainer">${paymentsHtml}</div>

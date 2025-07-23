@@ -2,6 +2,7 @@
 
 import { getState, setState } from '../../core/state.js';
 import { calculateBalance } from '../transactions/transaction-utils.js';
+import { formatCurrency } from '../../ui/currency.js';
 
 /**
  * Renders the Chart.js bar chart for monthly cash flow.
@@ -107,16 +108,16 @@ export function renderStats() {
     <div class="stat-grid">
       <div class="stat-card">
         <div class="stat-value ${netBalance >= 0 ? 'text-green' : 'text-red'}">
-          $${Math.abs(netBalance / 100).toFixed(2)}
+          ${formatCurrency(netBalance)}
         </div>
         <div class="stat-label">Net Balance</div>
       </div>
       <div class="stat-card">
-        <div class="stat-value text-red">${(iouTotal / 100).toFixed(2)}</div>
+        <div class="stat-value text-red">${formatCurrency(iouTotal)}</div>
         <div class="stat-label">Total I Owe</div>
       </div>
       <div class="stat-card">
-        <div class="stat-value text-green">${(uomTotal / 100).toFixed(2)}</div>
+        <div class="stat-value text-green">${formatCurrency(uomTotal)}</div>
         <div class="stat-label">Total Owed to Me</div>
       </div>
       <div class="stat-card">
