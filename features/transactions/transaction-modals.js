@@ -4,13 +4,12 @@ import { db } from '../../db.js';
 import { app } from '../../core/state.js';
 import { showModal, closeModal } from '../../ui/modal.js';
 import { deletePayment } from '../actions.js';
+import { calculateBalance } from './transaction-utils.js';
 
-let calculateBalance;
 let loadData;
 let render;
 
 export function initTransactionModals(dependencies) {
-    calculateBalance = dependencies.calculateBalance;
     loadData = dependencies.loadData;
     render = dependencies.render;
 }

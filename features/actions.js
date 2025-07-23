@@ -6,11 +6,11 @@ import { db } from '../db.js';
 import { app } from '../core/state.js';
 import { showConfirm, showAlert } from '../ui/notifications.js';
 import { closeModal } from '../ui/modal.js';
+import { calculateBalance } from './transactions/transaction-utils.js';
 
 // Dependencies from other modules, to be initialized
 let loadData;
 let render;
-let calculateBalance;
 
 /**
  * Initializes the actions module with required functions from other modules.
@@ -19,7 +19,6 @@ let calculateBalance;
 export function initActions(dependencies) {
     loadData = dependencies.loadData;
     render = dependencies.render;
-    calculateBalance = dependencies.calculateBalance;
 }
 
 /**

@@ -2,19 +2,12 @@
 
 import { app } from '../core/state.js';
 import { setFabVisibility } from './fab.js';
-import { formatPhone } from '../features/persons/contact-helper.js';
-import { editPerson } from '../features/persons/person-modals.js';
+import { formatPhone } from '../contact-helper.js';
 import { deletePerson } from '../features/actions.js';
-
-// These functions are still in core/main.js, so we'll need to pass them in.
-// We will move them in a later phase.
-let calculateBalance, handleTransactionAction;
-
-export function initRenderer(mainApp) {
-    calculateBalance = mainApp.calculateBalance;
-    handleTransactionAction = mainApp.handleTransactionAction;
-}
-
+import { editPerson } from '../features/persons/person-modals.js';
+import { deleteTransaction } from '../features/actions.js';
+import { showEditTransactionModal, showPaymentModal, showTransactionDetails } from '../features/transactions/transaction-modals.js';
+import { calculateBalance } from '../features/transactions/transaction-utils.js';
 
 /**
  * Renders the main content based on the current view in the app state.
@@ -39,6 +32,31 @@ export function render() {
             break;
         default:
             renderTransactionList('IOU');
+    }
+}
+
+/**
+ * Handles clicks on action buttons within a transaction card.
+ * @param {Event} e - The click event.
+ */
+function handleTransactionAction(e) {
+    const action = e.target.dataset.action;
+    const id = e.target.dataset.id;
+    const transaction = app.transactions.find(t => t.id === id);
+
+    switch (action) {
+        case 'payment':
+            showPaymentModal(transaction);
+            break;
+        case 'details':
+            showTransactionDetails(transaction);
+            break;
+        case 'edit':
+            showEditTransactionModal(transaction);
+            break;
+        case 'delete':
+            deleteTransaction(id);
+            break;
     }
 }
 
