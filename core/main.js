@@ -14,6 +14,7 @@ import { initRenderer, render } from '../ui/renderer.js';
 import { initActions, deleteTransaction, deletePayment } from '../features/actions.js';
 import { initPersonModals } from '../features/persons/person-modals.js';
 import { initTransactionModals, showEditTransactionModal, showPaymentModal, showTransactionDetails } from '../features/transactions/transaction-modals.js';
+import { exportData, handleImport } from '../features/import-export/data-service.js';
 
 
 // =================================================================================================
@@ -79,7 +80,7 @@ async function loadData() {
 function setupEventListeners() {
     // Import/Export functionality
     document.getElementById('exportBtn').addEventListener('click', exportData);
-    document.getElementById('importBtn').addEventListener('change', handleImport);
+    document.getElementById('importBtn').addEventListener('change', (e) => handleImport(e, loadData, render));
 
     // Add a global listener for hash changes to re-render
     window.addEventListener('hashchange', () => {
@@ -134,58 +135,6 @@ function handleTransactionAction(e) {
 // =================================================================================================
 // UTILITIES & SERVICE WORKER
 // =================================================================================================
-
-/**
- * Exports all app data to a JSON file.
- */
-async function exportData() {
-    const data = {
-        version: '1.0',
-        exportDate: new Date().toISOString(),
-        persons: app.persons,
-        transactions: app.transactions
-    };
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `iou-data-${new Date().toISOString().split('T')[0]}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-}
-
-/**
- * Imports data from a JSON file, either merging or replacing existing data.
- * @param {Event} e - The file input change event.
- */
-async function handleImport(e) {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = async (event) => {
-        try {
-            const data = JSON.parse(event.target.result);
-            const shouldMerge = showConfirm('Merge with existing data? (Cancel to replace all data)');
-
-            if (!shouldMerge) {
-                await db.clear('persons');
-                await db.clear('transactions');
-            }
-
-            for (const person of data.persons) await db.put('persons', person);
-            for (const transaction of data.transactions) await db.put('transactions', transaction);
-
-            await loadData();
-            render();
-            showAlert('Data imported successfully!');
-        } catch (err) {
-            showAlert('Error importing data: ' + err.message);
-        }
-    };
-    reader.readAsText(file);
-    e.target.value = ''; // Reset file input
-}
 
 /**
  * Registers the service worker and handles update notifications.
