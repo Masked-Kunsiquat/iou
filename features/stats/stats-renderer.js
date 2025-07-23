@@ -11,15 +11,27 @@ function renderChart() {
     const monthlyData = {};
     const now = new Date();
 
+    // Use a consistent YYYY-MM key to avoid timezone issues
     for (let i = 5; i >= 0; i--) {
-        const month = new Date(now.getFullYear(), now.getMonth() - i, 1);
-        const key = month.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+        const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0'); // months are 0-indexed
+        const key = `${year}-${month}`;
         monthlyData[key] = { inflow: 0, outflow: 0 };
     }
 
     app.transactions.forEach(t => {
+        // Add validation for the transaction date
+        if (!t.date || isNaN(new Date(t.date))) {
+            console.warn(`Invalid date found for transaction ID: ${t.id}. Skipping.`);
+            return; // Skip this transaction
+        }
+        
         const date = new Date(t.date);
-        const key = date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const key = `${year}-${month}`;
+
         if (monthlyData[key]) {
             if (t.type === 'UOM') {
                 monthlyData[key].inflow += t.amount / 100;
@@ -29,9 +41,15 @@ function renderChart() {
         }
     });
 
-    const labels = Object.keys(monthlyData);
-    const inflow = labels.map(k => monthlyData[k].inflow);
-    const outflow = labels.map(k => monthlyData[k].outflow);
+    // Format labels for readability (e.g., "Jul '25")
+    const labels = Object.keys(monthlyData).map(key => {
+        const [year, month] = key.split('-');
+        const date = new Date(year, month - 1);
+        return date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+    });
+    
+    const inflow = Object.values(monthlyData).map(d => d.inflow);
+    const outflow = Object.values(monthlyData).map(d => d.outflow);
 
     if (app.chart) app.chart.destroy();
 
@@ -75,6 +93,10 @@ export function renderStats() {
     ).length;
 
     const main = document.getElementById('main');
+    if (!main) {
+        console.error('Fatal Error: The "main" element was not found in the DOM.');
+        return;
+    }
 
     main.innerHTML = `
     <h2 class="text-xl font-bold mb-4">Statistics</h2>
