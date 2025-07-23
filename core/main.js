@@ -58,6 +58,12 @@ export async function init() {
         if (versionBadge) {
             versionBadge.textContent = `v${app.version}`;
         }
+
+                const githubLink = document.querySelector('.github-link');
+        if (githubLink) {
+            githubLink.href = `https://github.com/Masked-Kunsiquat/iou/tree/v${app.version}`;
+        }
+        
         render(); // Initial render
     } catch (error) {
         console.error("Failed to initialize the app:", error);
