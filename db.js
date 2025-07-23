@@ -60,6 +60,44 @@ export class DB {
   }
 
   /**
+   * Executes a series of database operations atomically within a single transaction.
+   * @param {Array<{type: 'put'|'delete', storeName: string, value?: any, key?: any}>} operations - An array of operations to perform.
+   * @returns {Promise<void>} A promise that resolves if the transaction is successful, and rejects if it fails.
+   */
+  async transact(operations) {
+    if (!this.isIDBSupported) {
+      console.warn('Atomic transactions are not supported with localStorage fallback. Executing sequentially.');
+      // Fallback for localStorage: execute one by one without atomicity.
+      try {
+        for (const op of operations) {
+          if (op.type === 'put') await this._localStoragePut(op.storeName, op.value);
+          else if (op.type === 'delete') await this._localStorageDelete(op.storeName, op.key);
+        }
+        return Promise.resolve();
+      } catch (error) {
+        return Promise.reject(error);
+      }
+    }
+
+    const storeNames = [...new Set(operations.map(op => op.storeName))];
+
+    return new Promise((resolve, reject) => {
+        const transaction = this.db.transaction(storeNames, 'readwrite');
+        transaction.oncomplete = resolve;
+        transaction.onerror = () => reject(transaction.error);
+
+        for (const op of operations) {
+            const store = transaction.objectStore(op.storeName);
+            if (op.type === 'put') {
+                store.put(op.value);
+            } else if (op.type === 'delete') {
+                store.delete(op.key);
+            }
+        }
+    });
+  }
+
+  /**
    * Retrieves a single record from a specified object store by its key.
    * @param {string} storeName - The name of the object store.
    * @param {any} key - The key of the record to retrieve.

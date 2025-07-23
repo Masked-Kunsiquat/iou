@@ -5,7 +5,7 @@ import { generatePersonId, pickContact } from './contact-helper.js';
 import { app } from '../../core/state.js';
 import { showModal, closeModal } from '../../ui/modal.js';
 import { showAlert } from '../../ui/notifications.js';
-import { escapeHTML } from '../../ui/html-sanitizer.js'; // Import the sanitizer
+import { escapeHTML } from '../../ui/html-sanitizer.js';
 
 let loadData;
 let render;
@@ -68,7 +68,6 @@ export function editPerson(personId) {
     const person = app.persons.find(p => p.id === personId);
     if (!person) return;
 
-    // Sanitize the data before inserting it into the HTML
     const safeFirstName = escapeHTML(person.firstName);
     const safeLastName = escapeHTML(person.lastName);
     const safePhone = escapeHTML(person.phone);
@@ -85,25 +84,49 @@ export function editPerson(personId) {
     document.getElementById('editPersonForm').addEventListener('submit', async (e) => {
         e.preventDefault();
         const formData = new FormData(e.target);
+        const originalId = person.id;
 
-        person.firstName = formData.get('firstName');
-        person.lastName = formData.get('lastName');
-        person.phone = formData.get('phone');
+        // Create a temporary updated person object to check for ID change
+        const updatedPersonData = {
+            ...person,
+            firstName: formData.get('firstName'),
+            lastName: formData.get('lastName'),
+            phone: formData.get('phone'),
+        };
 
-        const newId = await generatePersonId(person.firstName, person.phone);
+        const newId = await generatePersonId(updatedPersonData.firstName, updatedPersonData.phone);
 
-        if (newId !== person.id) {
+        if (newId !== originalId) {
+            // ID has changed, so perform an atomic transaction
+            updatedPersonData.id = newId;
+
+            const operations = [
+                // 1. Delete the old person record
+                { type: 'delete', storeName: 'persons', key: originalId },
+                // 2. Add the new person record
+                { type: 'put', storeName: 'persons', value: updatedPersonData }
+            ];
+
+            // 3. Find and add all related transactions to be updated
             app.transactions.forEach(t => {
-                if (t.personId === person.id) t.personId = newId;
+                if (t.personId === originalId) {
+                    const updatedTransaction = { ...t, personId: newId };
+                    operations.push({ type: 'put', storeName: 'transactions', value: updatedTransaction });
+                }
             });
-            await db.delete('persons', person.id);
-            for (const t of app.transactions.filter(t => t.personId === newId)) {
-                await db.put('transactions', t);
+
+            try {
+                await db.transact(operations);
+            } catch (error) {
+                showAlert('An error occurred while updating the person and their transactions. The operation was cancelled to preserve data integrity.');
+                console.error('Atomic transaction failed:', error);
+                return; // Stop execution to prevent inconsistent state
             }
-            person.id = newId;
+        } else {
+            // ID did not change, so just a simple update is needed
+            await db.put('persons', updatedPersonData);
         }
 
-        await db.put('persons', person);
         await loadData();
         closeModal();
         render();
