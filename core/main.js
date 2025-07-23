@@ -11,6 +11,9 @@ import { initNavigation } from '../ui/navigation.js';
 import { showAlert, showConfirm } from '../ui/notifications.js';
 import { initRenderer, render } from '../ui/renderer.js';
 
+// Import Feature Modules
+import { initActions, deleteTransaction, deletePayment } from '../features/actions.js';
+
 
 // =================================================================================================
 // INITIALIZATION
@@ -23,13 +26,20 @@ export async function init() {
     await db.init();
     await loadData();
 
-    // Pass dependencies to the new renderer module
+    // Pass dependencies to the renderer module
     initRenderer({
         calculateBalance,
         handleTransactionAction,
         editPerson,
-        deletePerson,
     });
+
+    // Initialize feature modules
+    initActions({
+        loadData,
+        render,
+        calculateBalance,
+    });
+
 
     // Initialize UI modules, passing the app object for context
     initModal({ render });
@@ -87,6 +97,9 @@ function calculateBalance(transaction) {
 function handleTransactionAction(e) {
     const action = e.target.dataset.action;
     const id = e.target.dataset.id;
+
+    // For delete, the transaction object may no longer exist.
+    // For other actions, we find it.
     const transaction = app.transactions.find(t => t.id === id);
 
     switch (action) {
@@ -100,61 +113,11 @@ function handleTransactionAction(e) {
             showEditTransactionModal(transaction);
             break;
         case 'delete':
-            deleteTransaction(transaction);
+            // Call the imported delete function
+            deleteTransaction(id);
             break;
     }
 }
-
-/**
- * Deletes a transaction after confirmation.
- * @param {object} transaction - The transaction to delete.
- */
-async function deleteTransaction(transaction) {
-    if (!showConfirm(`Delete this ${transaction.type}? This action cannot be undone.`)) return;
-    await db.delete('transactions', transaction.id);
-    await loadData();
-    render();
-}
-
-/**
- * Deletes a specific payment from a transaction.
- * @param {string} transactionId - The ID of the parent transaction.
- * @param {string} paymentId - The ID of the payment to delete.
- */
-window.deletePayment = async function (transactionId, paymentId) {
-    if (!showConfirm('Delete this payment?')) return;
-
-    const transaction = app.transactions.find(t => t.id === transactionId);
-    transaction.payments = transaction.payments.filter(p => p.id !== paymentId);
-
-    if (calculateBalance(transaction) > 0) {
-        transaction.status = 'pending';
-    }
-
-    await db.put('transactions', transaction);
-    await loadData();
-    closeModal();
-    render();
-};
-
-/**
- * Deletes a person after confirming they have no associated transactions.
- * @param {string} personId - The ID of the person to delete.
- */
-async function deletePerson(personId) {
-    const hasTransactions = app.transactions.some(t => t.personId === personId);
-
-    if (hasTransactions) {
-        showAlert('Cannot delete person with existing transactions. Please delete their transactions first.');
-        return;
-    }
-
-    if (!showConfirm('Are you sure you want to delete this person?')) return;
-
-    await db.delete('persons', personId);
-    await loadData();
-    render();
-};
 
 /**
  * Updates a person's details in the database.
@@ -334,14 +297,14 @@ function showTransactionDetails(transaction) {
     const person = app.persons.find(p => p.id === transaction.personId);
     const balance = calculateBalance(transaction);
     const paymentsHtml = transaction.payments?.map(p => `
-    <div class="list-item"><div class="flex-between">
+    <div class="list-item flex-between">
         <div>
           <div class="text-sm">${(p.amount / 100).toFixed(2)}</div>
           <div class="text-xs text-gray">${new Date(p.date).toLocaleDateString()}</div>
           ${p.note ? `<div class="text-xs text-gray">${p.note}</div>` : ''}
         </div>
-        <button class="btn-icon text-red" onclick="deletePayment('${transaction.id}', '${p.id}')">×</button>
-    </div></div>`
+        <button class="btn-icon text-red" data-action="delete-payment" data-payment-id="${p.id}" data-transaction-id="${transaction.id}">×</button>
+    </div>`
     ).join('') || '<p class="text-sm text-gray">No payments yet</p>';
 
     showModal('Transaction Details', `
@@ -351,9 +314,19 @@ function showTransactionDetails(transaction) {
       <div class="flex-between mb-2"><span>Current Balance:</span><span class="font-bold">${(balance / 100).toFixed(2)}</span></div>
       <div class="flex-between"><span>Status:</span><span class="${transaction.status === 'paid' ? 'text-green' : ''}">${transaction.status}</span></div>
     </div>
-    <h3 class="font-bold mb-2">Payment History</h3><div class="list">${paymentsHtml}</div>
+    <h3 class="font-bold mb-2">Payment History</h3><div class="list" id="paymentListContainer">${paymentsHtml}</div>
   `);
+
+    // Attach event listener to the container for payment deletion
+    document.getElementById('paymentListContainer').addEventListener('click', (e) => {
+        if (e.target.dataset.action === 'delete-payment') {
+            const paymentId = e.target.dataset.paymentId;
+            const transactionId = e.target.dataset.transactionId;
+            deletePayment(transactionId, paymentId);
+        }
+    });
 }
+
 
 /**
  * Shows the modal for editing an existing transaction.
