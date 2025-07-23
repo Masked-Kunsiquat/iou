@@ -5,12 +5,11 @@ import { app } from '../../core/state.js';
 import { showModal, closeModal } from '../../ui/modal.js';
 import { deletePayment } from '../actions.js';
 import { calculateBalance } from './transaction-utils.js';
-import { escapeHTML } from '../../ui/html-sanitizer.js'; // 1. Import sanitizer
+import { escapeHTML } from '../../ui/html-sanitizer.js';
 
 let loadData;
 let render;
 
-// 2. Add a more robust unique ID generator
 function generateUUID() {
     return Date.now().toString(36) + Math.random().toString(36).substring(2);
 }
@@ -25,7 +24,6 @@ export function initTransactionModals(dependencies) {
  * @param {string} type - The type of transaction ('IOU' or 'UOM').
  */
 export function showTransactionModal(type) {
-    // 3. Sanitize person names for XSS prevention
     const personOptions = app.persons.map(p => {
         const firstName = escapeHTML(p.firstName || '');
         const lastName = escapeHTML(p.lastName || '');
@@ -47,7 +45,7 @@ export function showTransactionModal(type) {
         e.preventDefault();
         const formData = new FormData(e.target);
         const transaction = {
-            id: generateUUID(), // 4. Use the new UUID generator
+            id: generateUUID(),
             personId: formData.get('personId'),
             type: type.toUpperCase(),
             description: formData.get('description'),
@@ -72,7 +70,6 @@ export function showPaymentModal(transaction) {
     const person = app.persons.find(p => p.id === transaction.personId);
     const balance = calculateBalance(transaction);
 
-    // 5. Sanitize person names before rendering
     const safePersonName = person ? escapeHTML(`${person.firstName} ${person.lastName}`) : 'Unknown Person';
 
     showModal('Record Payment', `
@@ -89,7 +86,7 @@ export function showPaymentModal(transaction) {
         e.preventDefault();
         const formData = new FormData(e.target);
         const payment = {
-            id: generateUUID(), // 6. Use the new UUID generator for payments as well
+            id: generateUUID(),
             transactionId: transaction.id,
             amount: Math.round(parseFloat(formData.get('amount')) * 100),
             date: formData.get('paymentDate') + 'T12:00:00.000Z',
@@ -112,21 +109,26 @@ export function showPaymentModal(transaction) {
 export function showTransactionDetails(transaction) {
     const person = app.persons.find(p => p.id === transaction.personId);
     const balance = calculateBalance(transaction);
-    // Sanitize person name for details view
+    
+    // 1. Sanitize all user-provided data before rendering
     const safePersonName = person ? escapeHTML(`${person.firstName} ${person.lastName}`) : 'Unknown Person';
     const safeDescription = escapeHTML(transaction.description || '');
 
-    const paymentsHtml = transaction.payments?.map(p => `
-    <div class="list-item flex-between">
-        <div>
-          <div class="text-sm">${(p.amount / 100).toFixed(2)}</div>
-          <div class="text-xs text-gray">${new Date(p.date).toLocaleDateString()}</div>
-          ${p.note ? `<div class="text-xs text-gray">${escapeHTML(p.note)}</div>` : ''}
-        </div>
-        <button class="btn-icon text-red" data-action="delete-payment" data-payment-id="${p.id}" data-transaction-id="${transaction.id}">×</button>
-    </div>`
-    ).join('') || '<p class="text-sm text-gray">No payments yet</p>';
+    const paymentsHtml = transaction.payments?.map(p => {
+        // 2. Sanitize the payment note to prevent XSS
+        const safeNote = p.note ? `<div class="text-xs text-gray">${escapeHTML(p.note)}</div>` : '';
+        return `
+        <div class="list-item flex-between">
+            <div>
+              <div class="text-sm">${(p.amount / 100).toFixed(2)}</div>
+              <div class="text-xs text-gray">${new Date(p.date).toLocaleDateString()}</div>
+              ${safeNote}
+            </div>
+            <button class="btn-icon text-red" data-action="delete-payment" data-payment-id="${p.id}" data-transaction-id="${transaction.id}">×</button>
+        </div>`
+    }).join('') || '<p class="text-sm text-gray">No payments yet</p>';
 
+    // 3. Use the sanitized variables in the template literal
     showModal('Transaction Details', `
     <div class="mb-4"><strong>${safePersonName}</strong><br><span class="text-sm text-gray">${safeDescription}</span></div>
     <div class="mb-4">
@@ -137,7 +139,6 @@ export function showTransactionDetails(transaction) {
     <h3 class="font-bold mb-2">Payment History</h3><div class="list" id="paymentListContainer">${paymentsHtml}</div>
   `);
 
-    // Attach event listener to the container for payment deletion
     document.getElementById('paymentListContainer').addEventListener('click', (e) => {
         if (e.target.dataset.action === 'delete-payment') {
             const paymentId = e.target.dataset.paymentId;
@@ -159,7 +160,7 @@ export function showEditTransactionModal(transaction) {
         return `<option value="${p.id}" ${p.id === transaction.personId ? 'selected' : ''}>${firstName} ${lastName}</option>`
     }).join('');
     
-    // Sanitize existing transaction data for display
+    // 4. Sanitize the description before placing it in the input's value
     const safeDescription = escapeHTML(transaction.description || '');
 
     showModal(`Edit ${transaction.type}`, `
