@@ -1,6 +1,4 @@
-/**
- * @file Manages data import and export functionality.
- */
+// features/import-export/data-service.js
 
 import { db } from '../../db.js';
 import { app } from '../../core/state.js';
@@ -35,12 +33,29 @@ export async function handleImport(e, loadData, render) {
     const file = e.target.files[0];
     if (!file) return;
 
+    // 1. Add file type validation for security.
+    if (file.type !== 'application/json') {
+        showAlert('Invalid file type. Please select a .json file.');
+        e.target.value = ''; // Reset file input
+        return;
+    }
+
+
     const reader = new FileReader();
     reader.onload = async (event) => {
         try {
             const data = JSON.parse(event.target.result);
+
+            // 2. Add data structure validation.
+            if (!data || !Array.isArray(data.persons) || !Array.isArray(data.transactions)) {
+                throw new Error('Invalid data structure in JSON file. Required keys: "persons", "transactions".');
+            }
+
             const shouldMerge = showConfirm('Merge with existing data? (Cancel to replace all data)');
 
+            // 3. Add better error recovery.
+            // By validating the structure first, we reduce the risk of partial writes.
+            // A true transaction would require changes to db.js, but this is an improvement.
             if (!shouldMerge) {
                 await db.clear('persons');
                 await db.clear('transactions');
@@ -54,8 +69,13 @@ export async function handleImport(e, loadData, render) {
             showAlert('Data imported successfully!');
         } catch (err) {
             showAlert('Error importing data: ' + err.message);
+            // It's good practice to reload data to ensure the app state reflects the database
+            // state, even if the import failed.
+            await loadData();
+            render();
+        } finally {
+            e.target.value = ''; // Reset file input
         }
     };
     reader.readAsText(file);
-    e.target.value = ''; // Reset file input
 }
