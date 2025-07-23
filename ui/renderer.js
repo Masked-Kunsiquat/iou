@@ -9,26 +9,50 @@ import { renderStats } from '../features/stats/stats-renderer.js';
 
 /**
  * Renders the main content based on the current view in the app state.
+ * Includes error handling for each view's render function to prevent crashes.
  */
 export function render() {
     switch (app.currentView) {
         case VIEWS.IOU:
-            renderTransactionList('IOU');
-            setFabVisibility(true);
+            try {
+                renderTransactionList('IOU');
+                setFabVisibility(true);
+            } catch (error) {
+                console.error('Failed to render IOU view:', error);
+            }
             break;
         case VIEWS.UOM:
-            renderTransactionList('UOM');
-            setFabVisibility(true);
+            try {
+                renderTransactionList('UOM');
+                setFabVisibility(true);
+            } catch (error) {
+                console.error('Failed to render UOM view:', error);
+            }
             break;
         case VIEWS.STATS:
-            renderStats();
-            setFabVisibility(false);
+            try {
+                renderStats();
+                setFabVisibility(false);
+            } catch (error) {
+                console.error('Failed to render Stats view:', error);
+            }
             break;
         case VIEWS.PERSONS:
-            renderPersons();
-            setFabVisibility(true);
+            try {
+                renderPersons();
+                setFabVisibility(true);
+            } catch (error) {
+                console.error('Failed to render Persons view:', error);
+            }
             break;
         default:
-            renderTransactionList('IOU');
+            try {
+                // Fallback to IOU view for any unknown route
+                renderTransactionList('IOU');
+                setFabVisibility(true);
+            } catch (error) {
+                console.error('Failed to render default IOU view:', error);
+            }
+            break;
     }
 }
