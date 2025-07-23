@@ -25,36 +25,48 @@ import { exportData, handleImport } from '../features/import-export/data-service
  * Initializes the application, loads data, and sets up UI modules.
  */
 export async function init() {
-    await db.init();
-    await loadData();
+    try {
+        await db.init();
+        await loadData();
 
-    // Initialize feature modules
-    initActions({
-        loadData,
-        render,
-    });
+        // Initialize feature modules
+        initActions({
+            loadData,
+            render,
+        });
 
-    initPersonModals({
-        loadData,
-        render,
-    });
+        initPersonModals({
+            loadData,
+            render,
+        });
 
-    initTransactionModals({
-        loadData,
-        render,
-    });
+        initTransactionModals({
+            loadData,
+            render,
+        });
 
 
-    // Initialize UI modules, passing the app object for context
-    initModal({ render });
-    initFab();
-    initNavigation({ render });
+        // Initialize UI modules, passing the app object for context
+        initModal({ render });
+        initFab();
+        initNavigation({ render });
 
-    setupEventListeners();
-    registerServiceWorker();
+        setupEventListeners();
+        registerServiceWorker();
 
-    document.getElementById('versionBadge').textContent = `v${app.version}`;
-    render(); // Initial render
+        const versionBadge = document.getElementById('versionBadge');
+        if (versionBadge) {
+            versionBadge.textContent = `v${app.version}`;
+        }
+        render(); // Initial render
+    } catch (error) {
+        console.error("Failed to initialize the app:", error);
+        // Optionally, display an error message to the user
+        const mainElement = document.getElementById('main');
+        if (mainElement) {
+            mainElement.innerHTML = `<div class="card"><div class="card-header"><h2>Error</h2></div><div class="card-body"><p>Could not initialize the application. Please try refreshing the page.</p></div></div>`;
+        }
+    }
 }
 
 /**
@@ -70,8 +82,15 @@ async function loadData() {
  */
 function setupEventListeners() {
     // Import/Export functionality
-    document.getElementById('exportBtn').addEventListener('click', exportData);
-    document.getElementById('importBtn').addEventListener('change', (e) => handleImport(e, loadData, render));
+    const exportBtn = document.getElementById('exportBtn');
+    if (exportBtn) {
+        exportBtn.addEventListener('click', exportData);
+    }
+
+    const importBtn = document.getElementById('importBtn');
+    if (importBtn) {
+        importBtn.addEventListener('change', (e) => handleImport(e, loadData, render));
+    }
 
     // Add a global listener for hash changes to re-render
     window.addEventListener('hashchange', () => {
