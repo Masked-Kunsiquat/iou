@@ -5,6 +5,7 @@ import { generatePersonId, pickContact } from './contact-helper.js';
 import { app } from '../../core/state.js';
 import { showModal, closeModal } from '../../ui/modal.js';
 import { showAlert } from '../../ui/notifications.js';
+import { escapeHTML } from '../../ui/html-sanitizer.js'; // Import the sanitizer
 
 let loadData;
 let render;
@@ -65,12 +66,18 @@ export function showPersonModal() {
  */
 export function editPerson(personId) {
     const person = app.persons.find(p => p.id === personId);
+    if (!person) return;
+
+    // Sanitize the data before inserting it into the HTML
+    const safeFirstName = escapeHTML(person.firstName);
+    const safeLastName = escapeHTML(person.lastName);
+    const safePhone = escapeHTML(person.phone);
 
     showModal('Edit Person', `
     <form id="editPersonForm">
-      <div class="form-group"><label class="label">First Name</label><input type="text" name="firstName" class="input" value="${person.firstName}" required></div>
-      <div class="form-group"><label class="label">Last Name</label><input type="text" name="lastName" class="input" value="${person.lastName || ''}"></div>
-      <div class="form-group"><label class="label">Phone Number</label><input type="tel" name="phone" class="input" value="${person.phone}" required></div>
+      <div class="form-group"><label class="label">First Name</label><input type="text" name="firstName" class="input" value="${safeFirstName}" required></div>
+      <div class="form-group"><label class="label">Last Name</label><input type="text" name="lastName" class="input" value="${safeLastName || ''}"></div>
+      <div class="form-group"><label class="label">Phone Number</label><input type="tel" name="phone" class="input" value="${safePhone}" required></div>
       <button type="submit" class="btn w-full">Update</button>
     </form>
   `);
