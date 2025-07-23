@@ -3,16 +3,16 @@
 import { app } from '../core/state.js';
 import { setFabVisibility } from './fab.js';
 import { formatPhone } from '../contact-helper.js';
+import { editPerson } from '../features/persons/person-modals.js';
+import { deletePerson } from '../features/actions.js';
 
 // These functions are still in core/main.js, so we'll need to pass them in.
 // We will move them in a later phase.
-let calculateBalance, handleTransactionAction, editPerson, deletePerson;
+let calculateBalance, handleTransactionAction;
 
 export function initRenderer(mainApp) {
     calculateBalance = mainApp.calculateBalance;
     handleTransactionAction = mainApp.handleTransactionAction;
-    editPerson = mainApp.editPerson;
-    deletePerson = mainApp.deletePerson;
 }
 
 

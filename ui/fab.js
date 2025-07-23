@@ -2,15 +2,14 @@
  * @file Manages the Floating Action Button (FAB).
  */
 
-// App reference to know the current view and show modals
-let app;
+import { app } from '../core/state.js';
+import { showPersonModal } from '../features/persons/person-modals.js';
+import { showTransactionModal } from '../features/transactions/transaction-modals.js';
 
 /**
  * Initializes the FAB and its event listener.
- * @param {object} mainApp - The main application object.
  */
-export function initFab(mainApp) {
-  app = mainApp;
+export function initFab() {
   document.getElementById('fab').addEventListener('click', handleFabClick);
 }
 
@@ -20,11 +19,9 @@ export function initFab(mainApp) {
  */
 function handleFabClick() {
   if (app.currentView === 'persons') {
-    // The showPersonModal logic is in app.js, so we call it via the app object
-    app.showPersonModal();
+    showPersonModal();
   } else {
-    // The showTransactionModal logic is in app.js
-    app.showTransactionModal(app.currentView);
+    showTransactionModal(app.currentView);
   }
 }
 
