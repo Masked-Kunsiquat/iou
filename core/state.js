@@ -12,6 +12,12 @@ const _state = {
     transactions: [],
     currentView: 'iou',
     chart: null,
+    // Add new state for sorting and filtering
+    transactionSort: {
+        by: 'date', // 'date', 'name'
+        order: 'desc' // 'asc', 'desc'
+    },
+    showPaid: false,
 };
 
 // A list of listener functions to be called when the state changes.
