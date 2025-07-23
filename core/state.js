@@ -2,7 +2,7 @@
 
 // Global app state
 export const app = {
-    version: '1.0.2',
+    version: '1.0.3',
     persons: [],
     transactions: [],
     currentView: 'iou',

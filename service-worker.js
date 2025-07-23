@@ -8,7 +8,7 @@
  * The name of the cache, including the version.
  * @type {string}
  */
-const CACHE_NAME = 'iou-tracker-v1.0.2';
+const CACHE_NAME = 'iou-tracker-v1.0.3';
 
 /**
  * An array of all the assets to be cached upon installation.
