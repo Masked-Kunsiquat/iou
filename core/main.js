@@ -2,6 +2,7 @@
 
 import { db } from '../db.js';
 import { getState, setState, subscribe } from './state.js';
+import { getState, setState, subscribe } from './state.js';
 
 // Import UI Modules
 import { initModal } from '../ui/modal.js';
@@ -32,8 +33,18 @@ export async function init() {
         // Any time setState is called, render will be executed.
         subscribe(render);
 
+        
+        // Subscribe the render function to state changes.
+        // Any time setState is called, render will be executed.
+        subscribe(render);
+
         await loadData();
 
+        // Initialize feature modules, passing the loadData function
+        const deps = { loadData };
+        initActions(deps);
+        initPersonModals(deps);
+        initTransactionModals(deps);
         // Initialize feature modules, passing the loadData function
         const deps = { loadData };
         initActions(deps);
@@ -43,7 +54,10 @@ export async function init() {
 
         // Initialize UI modules
         initModal();
+        // Initialize UI modules
+        initModal();
         initFab();
+        initNavigation();
         initNavigation();
 
         setupEventListeners();
@@ -52,15 +66,18 @@ export async function init() {
         const versionBadge = document.getElementById('versionBadge');
         if (versionBadge) {
             versionBadge.textContent = `v${getState().version}`;
+            versionBadge.textContent = `v${getState().version}`;
         }
 
         const githubLink = document.querySelector('.github-link');
+        const githubLink = document.querySelector('.github-link');
         if (githubLink) {
+            githubLink.href = `https://github.com/Masked-Kunsiquat/iou/tree/v${getState().version}`;
             githubLink.href = `https://github.com/Masked-Kunsiquat/iou/tree/v${getState().version}`;
         }
         
-        // Initial render is handled by the navigation router (ui/navigation.js),
-        // which sets the initial view and triggers the first render.
+        // Initial render is now handled by the router, which calls setState
+        // No need to call render() here.
     } catch (error) {
         console.error("Failed to initialize the app:", error);
         // Optionally, display an error message to the user
@@ -74,6 +91,10 @@ export async function init() {
 /**
  * Loads all persons and transactions from the database into the app state.
  */
+export async function loadData() {
+    const persons = await db.getAll('persons');
+    const transactions = await db.getAll('transactions');
+    setState({ persons, transactions });
 export async function loadData() {
     const persons = await db.getAll('persons');
     const transactions = await db.getAll('transactions');
@@ -92,6 +113,8 @@ function setupEventListeners() {
 
     const importBtn = document.getElementById('importBtn');
     if (importBtn) {
+        // Pass loadData directly, render will be triggered by setState within loadData.
+        importBtn.addEventListener('change', (e) => handleImport(e, loadData));
         // Pass loadData directly, render will be triggered by setState within loadData.
         importBtn.addEventListener('change', (e) => handleImport(e, loadData));
     }
