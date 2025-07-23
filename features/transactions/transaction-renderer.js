@@ -1,6 +1,6 @@
 // features/transactions/transaction-renderer.js
 
-import { app } from '../../core/state.js';
+import { getState } from '../../core/state.js';
 import { calculateBalance } from './transaction-utils.js';
 import { showPaymentModal, showTransactionDetails, showEditTransactionModal } from './transaction-modals.js';
 import { deleteTransaction } from '../actions.js';
@@ -13,7 +13,8 @@ import { escapeHTML } from '../../ui/html-sanitizer.js';
 function handleTransactionAction(e) {
     const action = e.target.dataset.action;
     const id = e.target.dataset.id;
-    const transaction = app.transactions.find(t => t.id === id);
+    const { transactions } = getState();
+    const transaction = transactions.find(t => t.id === id);
 
     if (!transaction) return;
 
@@ -39,7 +40,8 @@ function handleTransactionAction(e) {
  * @returns {string} HTML string for the transaction card.
  */
 function renderTransaction(transaction) {
-    const person = app.persons.find(p => p.id === transaction.personId);
+    const { persons } = getState();
+    const person = persons.find(p => p.id === transaction.personId);
     const balance = calculateBalance(transaction);
     const isPaid = balance === 0;
     const isOverdue = transaction.dueDate && new Date(transaction.dueDate) < new Date() && !isPaid;
@@ -82,7 +84,8 @@ function renderTransaction(transaction) {
  * @param {string} type - The type of transactions to render.
  */
 export function renderTransactionList(type) {
-    const transactions = app.transactions.filter(t => t.type === type);
+    const { transactions } = getState();
+    const filteredTransactions = transactions.filter(t => t.type === type);
     const main = document.getElementById('main');
     
     if (!main) {
@@ -93,8 +96,8 @@ export function renderTransactionList(type) {
     main.innerHTML = `
     <h2 class="text-xl font-bold mb-4">${type === 'IOU' ? 'I Owe' : 'Owed to Me'}</h2>
     <div class="list">
-      ${transactions.length === 0 ? '<p class="text-gray">No transactions yet</p>' : ''}
-      ${transactions.map(t => renderTransaction(t)).join('')}
+      ${filteredTransactions.length === 0 ? '<p class="text-gray">No transactions yet</p>' : ''}
+      ${filteredTransactions.map(t => renderTransaction(t)).join('')}
     </div>
   `;
 

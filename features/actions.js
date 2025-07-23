@@ -3,14 +3,13 @@
  */
 
 import { db } from '../db.js';
-import { app } from '../core/state.js';
+import { getState } from '../core/state.js';
 import { showConfirm, showAlert } from '../ui/notifications.js';
 import { closeModal } from '../ui/modal.js';
 import { calculateBalance } from './transactions/transaction-utils.js';
 
 // Dependencies from other modules, to be initialized
 let loadData;
-let render;
 
 /**
  * Initializes the actions module with required functions from other modules.
@@ -18,7 +17,6 @@ let render;
  */
 export function initActions(dependencies) {
     loadData = dependencies.loadData;
-    render = dependencies.render;
 }
 
 /**
@@ -26,14 +24,14 @@ export function initActions(dependencies) {
  * @param {string} transactionId - The ID of the transaction to delete.
  */
 export async function deleteTransaction(transactionId) {
-    const transaction = app.transactions.find(t => t.id === transactionId);
+    const { transactions } = getState();
+    const transaction = transactions.find(t => t.id === transactionId);
     if (!transaction) return;
 
     if (!showConfirm(`Delete this ${transaction.type}? This action cannot be undone.`)) return;
 
     await db.delete('transactions', transaction.id);
     await loadData();
-    render();
 }
 
 /**
@@ -43,8 +41,9 @@ export async function deleteTransaction(transactionId) {
  */
 export async function deletePayment(transactionId, paymentId) {
     if (!showConfirm('Delete this payment?')) return;
-
-    const transaction = app.transactions.find(t => t.id === transactionId);
+    
+    const { transactions } = getState();
+    const transaction = transactions.find(t => t.id === transactionId);
     if (!transaction) return;
 
     transaction.payments = transaction.payments.filter(p => p.id !== paymentId);
@@ -57,7 +56,6 @@ export async function deletePayment(transactionId, paymentId) {
     await db.put('transactions', transaction);
     await loadData();
     closeModal(); // Close the details modal if open
-    render();
 };
 
 /**
@@ -65,7 +63,8 @@ export async function deletePayment(transactionId, paymentId) {
  * @param {string} personId - The ID of the person to delete.
  */
 export async function deletePerson(personId) {
-    const hasTransactions = app.transactions.some(t => t.personId === personId);
+    const { transactions } = getState();
+    const hasTransactions = transactions.some(t => t.personId === personId);
 
     if (hasTransactions) {
         showAlert('Cannot delete person with existing transactions. Please delete their transactions first.');
@@ -76,5 +75,4 @@ export async function deletePerson(personId) {
 
     await db.delete('persons', personId);
     await loadData();
-    render();
 };

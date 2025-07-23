@@ -1,18 +1,19 @@
 // features/import-export/data-service.js
 
 import { db } from '../../db.js';
-import { app } from '../../core/state.js';
+import { getState } from '../../core/state.js';
 import { showAlert, showConfirm } from '../../ui/notifications.js';
 
 /**
  * Exports all app data to a JSON file.
  */
 export async function exportData() {
+    const { persons, transactions } = getState();
     const data = {
         version: '1.0',
         exportDate: new Date().toISOString(),
-        persons: app.persons,
-        transactions: app.transactions
+        persons: persons,
+        transactions: transactions
     };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -26,10 +27,9 @@ export async function exportData() {
 /**
  * Imports data from a JSON file, either merging or replacing existing data.
  * @param {Event} e - The file input change event.
- * @param {Function} loadData - Function to reload data from the database.
- * @param {Function} render - Function to re-render the UI.
+ * @param {Function} loadData - Function to reload data from the database and update state.
  */
-export async function handleImport(e, loadData, render) {
+export async function handleImport(e, loadData) {
     const file = e.target.files[0];
     if (!file) return;
 
@@ -65,14 +65,12 @@ export async function handleImport(e, loadData, render) {
             for (const transaction of data.transactions) await db.put('transactions', transaction);
 
             await loadData();
-            render();
             showAlert('Data imported successfully!');
         } catch (err) {
             showAlert('Error importing data: ' + err.message);
             // It's good practice to reload data to ensure the app state reflects the database
             // state, even if the import failed.
             await loadData();
-            render();
         } finally {
             e.target.value = ''; // Reset file input
         }

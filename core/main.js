@@ -1,7 +1,7 @@
 // core/main.js
 
 import { db } from '../db.js';
-import { app } from './state.js';
+import { getState, setState, subscribe } from './state.js';
 
 // Import UI Modules
 import { initModal } from '../ui/modal.js';
@@ -27,44 +27,40 @@ import { exportData, handleImport } from '../features/import-export/data-service
 export async function init() {
     try {
         await db.init();
+        
+        // Subscribe the render function to state changes.
+        // Any time setState is called, render will be executed.
+        subscribe(render);
+
         await loadData();
 
-        // Initialize feature modules
-        initActions({
-            loadData,
-            render,
-        });
-
-        initPersonModals({
-            loadData,
-            render,
-        });
-
-        initTransactionModals({
-            loadData,
-            render,
-        });
+        // Initialize feature modules, passing the loadData function
+        const deps = { loadData };
+        initActions(deps);
+        initPersonModals(deps);
+        initTransactionModals(deps);
 
 
-        // Initialize UI modules, passing the app object for context
-        initModal({ render });
+        // Initialize UI modules
+        initModal();
         initFab();
-        initNavigation({ render });
+        initNavigation();
 
         setupEventListeners();
         registerServiceWorker();
 
         const versionBadge = document.getElementById('versionBadge');
         if (versionBadge) {
-            versionBadge.textContent = `v${app.version}`;
+            versionBadge.textContent = `v${getState().version}`;
         }
 
-                const githubLink = document.querySelector('.github-link');
+        const githubLink = document.querySelector('.github-link');
         if (githubLink) {
-            githubLink.href = `https://github.com/Masked-Kunsiquat/iou/tree/v${app.version}`;
+            githubLink.href = `https://github.com/Masked-Kunsiquat/iou/tree/v${getState().version}`;
         }
         
-        render(); // Initial render
+        // Initial render is handled by the navigation router (ui/navigation.js),
+        // which sets the initial view and triggers the first render.
     } catch (error) {
         console.error("Failed to initialize the app:", error);
         // Optionally, display an error message to the user
@@ -78,9 +74,10 @@ export async function init() {
 /**
  * Loads all persons and transactions from the database into the app state.
  */
-async function loadData() {
-    app.persons = await db.getAll('persons');
-    app.transactions = await db.getAll('transactions');
+export async function loadData() {
+    const persons = await db.getAll('persons');
+    const transactions = await db.getAll('transactions');
+    setState({ persons, transactions });
 }
 
 /**
@@ -95,14 +92,9 @@ function setupEventListeners() {
 
     const importBtn = document.getElementById('importBtn');
     if (importBtn) {
-        importBtn.addEventListener('change', (e) => handleImport(e, loadData, render));
+        // Pass loadData directly, render will be triggered by setState within loadData.
+        importBtn.addEventListener('change', (e) => handleImport(e, loadData));
     }
-
-    // Add a global listener for hash changes to re-render
-    window.addEventListener('hashchange', () => {
-        app.currentView = window.location.hash.slice(1) || 'iou';
-        render();
-    });
 }
 
 // =================================================================================================

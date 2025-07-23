@@ -2,7 +2,7 @@
  * @file Manages the Floating Action Button (FAB).
  */
 
-import { app } from '../core/state.js';
+import { getState } from '../core/state.js';
 import { showPersonModal } from '../features/persons/person-modals.js';
 import { showTransactionModal } from '../features/transactions/transaction-modals.js';
 
@@ -23,10 +23,11 @@ export function initFab() {
  * It shows the appropriate modal based on the current view.
  */
 function handleFabClick() {
-  if (app.currentView === 'persons') {
+  const { currentView } = getState();
+  if (currentView === 'persons') {
     showPersonModal();
   } else {
-    showTransactionModal(app.currentView);
+    showTransactionModal(currentView);
   }
 }
 
