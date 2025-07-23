@@ -1,6 +1,6 @@
 // features/persons/person-renderer.js
 
-import { app } from '../../core/state.js';
+import { getState } from '../../core/state.js';
 import { formatPhone } from './contact-helper.js';
 import { deletePerson } from '../actions.js';
 import { editPerson } from './person-modals.js';
@@ -11,6 +11,7 @@ import { escapeHTML } from '../../ui/html-sanitizer.js';
  */
 export function renderPersons() {
     const main = document.getElementById('main');
+    const { persons } = getState();
 
     if (!main) {
         console.error('Fatal Error: The "main" element was not found in the DOM.');
@@ -20,8 +21,8 @@ export function renderPersons() {
     main.innerHTML = `
     <h2 class="text-xl font-bold mb-4">People</h2>
     <div class="list">
-      ${app.persons.length === 0 ? '<p class="text-gray">No people added yet</p>' : ''}
-      ${app.persons
+      ${persons.length === 0 ? '<p class="text-gray">No people added yet</p>' : ''}
+      ${persons
         .filter(p => p && p.id && p.firstName) // Ensure the person object and required fields exist
         .map(p => {
         // Sanitize data and provide fallbacks for optional fields

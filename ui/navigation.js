@@ -3,19 +3,16 @@
  */
 
 import { VIEWS } from '../core/constants.js';
+import { setState } from '../core/state.js';
 
-let app;
 let isInitialized = false;
 
 /**
  * Initializes navigation features and event listeners.
  * Includes guards to prevent multiple initializations and null checks for DOM elements.
- * @param {object} mainApp - The main application object.
  */
-export function initNavigation(mainApp) {
+export function initNavigation() {
   if (isInitialized) return;
-
-  app = mainApp;
 
   // Menu button
   const menuBtn = document.getElementById('menuBtn');
@@ -63,15 +60,10 @@ function toggleMenu(show) {
 }
 
 /**
- * Reads the URL hash and triggers a render for the corresponding view.
- * Validates the route and handles potential rendering errors.
+ * Reads the URL hash and triggers a render for the corresponding view
+ * by updating the application state.
  */
 function router() {
-  if (!app) {
-      console.error("Router called before app is initialized.");
-      return;
-  }
-
   // Get the view name from the hash, defaulting to 'iou'
   let hash = window.location.hash.slice(1);
 
@@ -83,12 +75,7 @@ function router() {
       return; // The hash change will trigger the router again with a valid hash
   }
 
-  app.currentView = hash;
-  
-  // Tell the main app to render the new view
-  try {
-    app.render();
-  } catch (error) {
-    console.error(`Error rendering view "${hash}":`, error);
-  }
+  // Set the current view in the state. This will trigger the subscribed
+  // render function automatically.
+  setState({ currentView: hash });
 }

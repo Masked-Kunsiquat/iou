@@ -2,17 +2,15 @@
 
 import { db } from '../../db.js';
 import { generatePersonId, pickContact } from './contact-helper.js';
-import { app } from '../../core/state.js';
+import { getState } from '../../core/state.js';
 import { showModal, closeModal } from '../../ui/modal.js';
 import { showAlert } from '../../ui/notifications.js';
 import { escapeHTML } from '../../ui/html-sanitizer.js';
 
 let loadData;
-let render;
 
 export function initPersonModals(dependencies) {
     loadData = dependencies.loadData;
-    render = dependencies.render;
 }
 
 /**
@@ -56,7 +54,6 @@ export function showPersonModal() {
         await db.put('persons', person);
         await loadData();
         closeModal();
-        render();
     });
 }
 
@@ -65,7 +62,8 @@ export function showPersonModal() {
  * @param {string} personId - The ID of the person to edit.
  */
 export function editPerson(personId) {
-    const person = app.persons.find(p => p.id === personId);
+    const { persons, transactions } = getState();
+    const person = persons.find(p => p.id === personId);
     if (!person) return;
 
     const safeFirstName = escapeHTML(person.firstName);
@@ -108,7 +106,7 @@ export function editPerson(personId) {
             ];
 
             // 3. Find and add all related transactions to be updated
-            app.transactions.forEach(t => {
+            transactions.forEach(t => {
                 if (t.personId === originalId) {
                     const updatedTransaction = { ...t, personId: newId };
                     operations.push({ type: 'put', storeName: 'transactions', value: updatedTransaction });
@@ -129,6 +127,5 @@ export function editPerson(personId) {
 
         await loadData();
         closeModal();
-        render();
     });
 };

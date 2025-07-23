@@ -1,6 +1,6 @@
 // features/stats/stats-renderer.js
 
-import { app } from '../../core/state.js';
+import { getState, setState } from '../../core/state.js';
 import { calculateBalance } from '../transactions/transaction-utils.js';
 
 /**
@@ -10,6 +10,7 @@ function renderChart() {
     const ctx = document.getElementById('chartCanvas').getContext('2d');
     const monthlyData = {};
     const now = new Date();
+    const { transactions, chart } = getState();
 
     // Use a consistent YYYY-MM key to avoid timezone issues
     for (let i = 5; i >= 0; i--) {
@@ -20,7 +21,7 @@ function renderChart() {
         monthlyData[key] = { inflow: 0, outflow: 0 };
     }
 
-    app.transactions.forEach(t => {
+    transactions.forEach(t => {
         // Add validation for the transaction date
         if (!t.date || isNaN(new Date(t.date))) {
             console.warn(`Invalid date found for transaction ID: ${t.id}. Skipping.`);
@@ -51,9 +52,9 @@ function renderChart() {
     const inflow = Object.values(monthlyData).map(d => d.inflow);
     const outflow = Object.values(monthlyData).map(d => d.outflow);
 
-    if (app.chart) app.chart.destroy();
+    if (chart) chart.destroy();
 
-    app.chart = new Chart(ctx, {
+    const newChart = new Chart(ctx, {
         type: 'bar',
         data: {
             labels: labels,
@@ -68,27 +69,30 @@ function renderChart() {
             scales: { y: { beginAtZero: true, ticks: { callback: value => '$' + value } } }
         }
     });
+
+    setState({ chart: newChart });
 }
 
 /**
  * Renders the statistics view, including the cash flow chart.
  */
 export function renderStats() {
-    const iouTotal = app.transactions
+    const { transactions } = getState();
+    const iouTotal = transactions
         .filter(t => t.type === 'IOU')
         .reduce((sum, t) => sum + calculateBalance(t), 0);
 
-    const uomTotal = app.transactions
+    const uomTotal = transactions
         .filter(t => t.type === 'UOM')
         .reduce((sum, t) => sum + calculateBalance(t), 0);
 
     const netBalance = uomTotal - iouTotal;
 
-    const overdueIOU = app.transactions.filter(t =>
+    const overdueIOU = transactions.filter(t =>
         t.type === 'IOU' && t.dueDate && new Date(t.dueDate) < new Date() && t.status !== 'paid'
     ).length;
 
-    const overdueUOM = app.transactions.filter(t =>
+    const overdueUOM = transactions.filter(t =>
         t.type === 'UOM' && t.dueDate && new Date(t.dueDate) < new Date() && t.status !== 'paid'
     ).length;
 

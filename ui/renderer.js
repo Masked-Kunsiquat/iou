@@ -1,6 +1,6 @@
 // ui/renderer.js
 
-import { app } from '../core/state.js';
+import { getState } from '../core/state.js';
 import { VIEWS } from '../core/constants.js';
 import { setFabVisibility } from './fab.js';
 import { renderTransactionList } from '../features/transactions/transaction-renderer.js';
@@ -12,7 +12,8 @@ import { renderStats } from '../features/stats/stats-renderer.js';
  * Includes error handling for each view's render function to prevent crashes.
  */
 export function render() {
-    switch (app.currentView) {
+    const { currentView } = getState();
+    switch (currentView) {
         case VIEWS.IOU:
             try {
                 renderTransactionList('IOU');

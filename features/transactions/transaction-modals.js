@@ -1,14 +1,13 @@
 // features/transactions/transaction-modals.js
 
 import { db } from '../../db.js';
-import { app } from '../../core/state.js';
+import { getState } from '../../core/state.js';
 import { showModal, closeModal } from '../../ui/modal.js';
 import { deletePayment } from '../actions.js';
 import { calculateBalance } from './transaction-utils.js';
 import { escapeHTML } from '../../ui/html-sanitizer.js';
 
 let loadData;
-let render;
 
 function generateUUID() {
     return Date.now().toString(36) + Math.random().toString(36).substring(2);
@@ -16,7 +15,6 @@ function generateUUID() {
 
 export function initTransactionModals(dependencies) {
     loadData = dependencies.loadData;
-    render = dependencies.render;
 }
 
 /**
@@ -24,7 +22,8 @@ export function initTransactionModals(dependencies) {
  * @param {string} type - The type of transaction ('IOU' or 'UOM').
  */
 export function showTransactionModal(type) {
-    const personOptions = app.persons.map(p => {
+    const { persons } = getState();
+    const personOptions = persons.map(p => {
         const firstName = escapeHTML(p.firstName || '');
         const lastName = escapeHTML(p.lastName || '');
         return `<option value="${p.id}">${firstName} ${lastName}</option>`;
@@ -58,7 +57,6 @@ export function showTransactionModal(type) {
         await db.put('transactions', transaction);
         await loadData();
         closeModal();
-        render();
     });
 }
 
@@ -67,7 +65,8 @@ export function showTransactionModal(type) {
  * @param {object} transaction - The transaction to add a payment to.
  */
 export function showPaymentModal(transaction) {
-    const person = app.persons.find(p => p.id === transaction.personId);
+    const { persons } = getState();
+    const person = persons.find(p => p.id === transaction.personId);
     const balance = calculateBalance(transaction);
 
     const safePersonName = person ? escapeHTML(`${person.firstName} ${person.lastName}`) : 'Unknown Person';
@@ -98,7 +97,6 @@ export function showPaymentModal(transaction) {
         await db.put('transactions', transaction);
         await loadData();
         closeModal();
-        render();
     });
 }
 
@@ -107,7 +105,8 @@ export function showPaymentModal(transaction) {
  * @param {object} transaction - The transaction to show details for.
  */
 export function showTransactionDetails(transaction) {
-    const person = app.persons.find(p => p.id === transaction.personId);
+    const { persons } = getState();
+    const person = persons.find(p => p.id === transaction.personId);
     const balance = calculateBalance(transaction);
     
     // 1. Sanitize all user-provided data before rendering
@@ -154,7 +153,8 @@ export function showTransactionDetails(transaction) {
  * @param {object} transaction - The transaction to edit.
  */
 export function showEditTransactionModal(transaction) {
-    const personOptions = app.persons.map(p => {
+    const { persons } = getState();
+    const personOptions = persons.map(p => {
         const firstName = escapeHTML(p.firstName || '');
         const lastName = escapeHTML(p.lastName || '');
         return `<option value="${p.id}" ${p.id === transaction.personId ? 'selected' : ''}>${firstName} ${lastName}</option>`
@@ -185,6 +185,5 @@ export function showEditTransactionModal(transaction) {
         await db.put('transactions', transaction);
         await loadData();
         closeModal();
-        render();
     });
 }
