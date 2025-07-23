@@ -1,11 +1,32 @@
 const CACHE_NAME = 'iou-tracker-v1.0.2';  // Update version here too
 const urlsToCache = [
+  // Core files
   './',
   './index.html',
   './styles.css',
+  './manifest.json',
   './app.js',
   './db.js',
-  './contact-helper.js',
+  './features/persons/contact-helper.js',
+
+  // Core Modules
+  './core/main.js',
+  './core/state.js',
+
+  // UI Modules
+  './ui/fab.js',
+  './ui/modal.js',
+  './ui/navigation.js',
+  './ui/notifications.js',
+  './ui/renderer.js',
+
+  // Feature Modules
+  './features/actions.js',
+  './features/import-export/data-service.js',
+  './features/persons/person-modals.js',
+  './features/transactions/transaction-modals.js',
+
+  // External CDN
   'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js'
 ];
 
