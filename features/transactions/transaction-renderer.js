@@ -40,23 +40,18 @@ function handleTransactionAction(e) {
  * @returns {string} HTML string for the transaction card.
  */
 function renderTransaction(transaction) {
-    const { persons } = getState();
-    const person = persons.find(p => p.id === transaction.personId);
     const balance = calculateBalance(transaction);
     const isPaid = balance === 0;
     const isOverdue = transaction.dueDate && new Date(transaction.dueDate) < new Date() && !isPaid;
 
     // Sanitize user-provided data before rendering to prevent XSS
-    const firstName = escapeHTML(person?.firstName || '');
-    const lastName = escapeHTML(person?.lastName || '');
-    const description = escapeHTML(transaction.description || '');
+    const description = escapeHTML(transaction.description || 'No Description');
 
     return `
     <div class="card" data-id="${transaction.id}" ${isPaid ? 'style="opacity: 0.6;"' : ''}>
       <div class="card-header">
         <div>
-          <div class="font-bold">${firstName} ${lastName}</div>
-          <div class="text-sm text-gray">${description}</div>
+          <div class="font-bold">${description}</div>
           <div class="text-xs text-gray mt-1">
             ${new Date(transaction.date).toLocaleDateString()}
             ${transaction.dueDate ? ` • Due: ${new Date(transaction.dueDate).toLocaleDateString()}` : ''}
@@ -78,6 +73,7 @@ function renderTransaction(transaction) {
     </div>
   `;
 }
+
 
 /**
  * Renders a list of transactions of a specific type ('IOU' or 'UOM').
