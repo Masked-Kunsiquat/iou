@@ -5,9 +5,15 @@ import { app } from '../../core/state.js';
 import { showModal, closeModal } from '../../ui/modal.js';
 import { deletePayment } from '../actions.js';
 import { calculateBalance } from './transaction-utils.js';
+import { escapeHTML } from '../../ui/html-sanitizer.js'; // 1. Import sanitizer
 
 let loadData;
 let render;
+
+// 2. Add a more robust unique ID generator
+function generateUUID() {
+    return Date.now().toString(36) + Math.random().toString(36).substring(2);
+}
 
 export function initTransactionModals(dependencies) {
     loadData = dependencies.loadData;
@@ -19,7 +25,13 @@ export function initTransactionModals(dependencies) {
  * @param {string} type - The type of transaction ('IOU' or 'UOM').
  */
 export function showTransactionModal(type) {
-    const personOptions = app.persons.map(p => `<option value="${p.id}">${p.firstName} ${p.lastName}</option>`).join('');
+    // 3. Sanitize person names for XSS prevention
+    const personOptions = app.persons.map(p => {
+        const firstName = escapeHTML(p.firstName || '');
+        const lastName = escapeHTML(p.lastName || '');
+        return `<option value="${p.id}">${firstName} ${lastName}</option>`;
+    }).join('');
+
     showModal(`Add ${type}`, `
     <form id="transactionForm">
       <div class="form-group"><label class="label">Person</label><select name="personId" class="select" required><option value="">Select person...</option>${personOptions}</select></div>
@@ -35,7 +47,7 @@ export function showTransactionModal(type) {
         e.preventDefault();
         const formData = new FormData(e.target);
         const transaction = {
-            id: Date.now().toString(),
+            id: generateUUID(), // 4. Use the new UUID generator
             personId: formData.get('personId'),
             type: type.toUpperCase(),
             description: formData.get('description'),
@@ -60,9 +72,12 @@ export function showPaymentModal(transaction) {
     const person = app.persons.find(p => p.id === transaction.personId);
     const balance = calculateBalance(transaction);
 
+    // 5. Sanitize person names before rendering
+    const safePersonName = person ? escapeHTML(`${person.firstName} ${person.lastName}`) : 'Unknown Person';
+
     showModal('Record Payment', `
     <form id="paymentForm">
-      <div class="mb-2"><strong>${person?.firstName} ${person?.lastName}</strong><br><span class="text-sm text-gray">Balance: ${(balance / 100).toFixed(2)}</span></div>
+      <div class="mb-2"><strong>${safePersonName}</strong><br><span class="text-sm text-gray">Balance: ${(balance / 100).toFixed(2)}</span></div>
       <div class="form-group"><label class="label">Amount</label><input type="number" step="0.01" name="amount" class="input" placeholder="0.00" required max="${balance / 100}"></div>
       <div class="form-group"><label class="label">Payment Date</label><input type="date" name="paymentDate" class="input" required value="${new Date().toISOString().split('T')[0]}"></div>
       <div class="form-group"><label class="label">Note (optional)</label><input type="text" name="note" class="input" placeholder="Payment note"></div>
@@ -74,7 +89,7 @@ export function showPaymentModal(transaction) {
         e.preventDefault();
         const formData = new FormData(e.target);
         const payment = {
-            id: Date.now().toString(),
+            id: generateUUID(), // 6. Use the new UUID generator for payments as well
             transactionId: transaction.id,
             amount: Math.round(parseFloat(formData.get('amount')) * 100),
             date: formData.get('paymentDate') + 'T12:00:00.000Z',
@@ -97,19 +112,23 @@ export function showPaymentModal(transaction) {
 export function showTransactionDetails(transaction) {
     const person = app.persons.find(p => p.id === transaction.personId);
     const balance = calculateBalance(transaction);
+    // Sanitize person name for details view
+    const safePersonName = person ? escapeHTML(`${person.firstName} ${person.lastName}`) : 'Unknown Person';
+    const safeDescription = escapeHTML(transaction.description || '');
+
     const paymentsHtml = transaction.payments?.map(p => `
     <div class="list-item flex-between">
         <div>
           <div class="text-sm">${(p.amount / 100).toFixed(2)}</div>
           <div class="text-xs text-gray">${new Date(p.date).toLocaleDateString()}</div>
-          ${p.note ? `<div class="text-xs text-gray">${p.note}</div>` : ''}
+          ${p.note ? `<div class="text-xs text-gray">${escapeHTML(p.note)}</div>` : ''}
         </div>
         <button class="btn-icon text-red" data-action="delete-payment" data-payment-id="${p.id}" data-transaction-id="${transaction.id}">×</button>
     </div>`
     ).join('') || '<p class="text-sm text-gray">No payments yet</p>';
 
     showModal('Transaction Details', `
-    <div class="mb-4"><strong>${person?.firstName} ${person?.lastName}</strong><br><span class="text-sm text-gray">${transaction.description}</span></div>
+    <div class="mb-4"><strong>${safePersonName}</strong><br><span class="text-sm text-gray">${safeDescription}</span></div>
     <div class="mb-4">
       <div class="flex-between mb-2"><span>Original Amount:</span><span>${(transaction.amount / 100).toFixed(2)}</span></div>
       <div class="flex-between mb-2"><span>Current Balance:</span><span class="font-bold">${(balance / 100).toFixed(2)}</span></div>
@@ -134,12 +153,20 @@ export function showTransactionDetails(transaction) {
  * @param {object} transaction - The transaction to edit.
  */
 export function showEditTransactionModal(transaction) {
-    const personOptions = app.persons.map(p => `<option value="${p.id}" ${p.id === transaction.personId ? 'selected' : ''}>${p.firstName} ${p.lastName}</option>`).join('');
+    const personOptions = app.persons.map(p => {
+        const firstName = escapeHTML(p.firstName || '');
+        const lastName = escapeHTML(p.lastName || '');
+        return `<option value="${p.id}" ${p.id === transaction.personId ? 'selected' : ''}>${firstName} ${lastName}</option>`
+    }).join('');
+    
+    // Sanitize existing transaction data for display
+    const safeDescription = escapeHTML(transaction.description || '');
+
     showModal(`Edit ${transaction.type}`, `
     <form id="editTransactionForm">
       <div class="form-group"><label class="label">Person</label><select name="personId" class="select" required>${personOptions}</select></div>
       <div class="form-group"><label class="label">Amount</label><input type="number" step="0.01" name="amount" class="input" value="${(transaction.amount / 100).toFixed(2)}" required></div>
-      <div class="form-group"><label class="label">Description</label><input type="text" name="description" class="input" value="${transaction.description}" required></div>
+      <div class="form-group"><label class="label">Description</label><input type="text" name="description" class="input" value="${safeDescription}" required></div>
       <div class="form-group"><label class="label">Date</label><input type="date" name="date" class="input" value="${transaction.date}" required></div>
       <div class="form-group"><label class="label">Due Date (optional)</label><input type="date" name="dueDate" class="input" value="${transaction.dueDate || ''}"></div>
       <button type="submit" class="btn w-full">Update ${transaction.type}</button>
