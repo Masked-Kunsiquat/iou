@@ -1,8 +1,6 @@
 // core/state.js
 
-// Make key functions available to modules that need them
 // We will define these later, but the state object needs placeholders
-function render() {}
 function showPersonModal() {}
 function showTransactionModal() {}
 
@@ -15,7 +13,6 @@ export const app = {
     currentView: 'iou',
     currentTransaction: null,
     chart: null,
-    render,
     showPersonModal,
     showTransactionModal,
 };
