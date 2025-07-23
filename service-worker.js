@@ -22,8 +22,7 @@ const urlsToCache = [
   './manifest.json',
   './app.js',
   './db.js',
-  './features/persons/contact-helper.js',
-
+  
   // Core Modules
   './core/main.js',
   './core/state.js',
