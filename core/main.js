@@ -2,7 +2,6 @@
 
 import { db } from '../db.js';
 import { getState, setState, subscribe } from './state.js';
-import { getState, setState, subscribe } from './state.js';
 
 // Import UI Modules
 import { initModal } from '../ui/modal.js';
@@ -33,11 +32,6 @@ export async function init() {
         // Any time setState is called, render will be executed.
         subscribe(render);
 
-        
-        // Subscribe the render function to state changes.
-        // Any time setState is called, render will be executed.
-        subscribe(render);
-
         await loadData();
 
         // Initialize feature modules, passing the loadData function
@@ -45,19 +39,11 @@ export async function init() {
         initActions(deps);
         initPersonModals(deps);
         initTransactionModals(deps);
-        // Initialize feature modules, passing the loadData function
-        const deps = { loadData };
-        initActions(deps);
-        initPersonModals(deps);
-        initTransactionModals(deps);
 
 
-        // Initialize UI modules
-        initModal();
         // Initialize UI modules
         initModal();
         initFab();
-        initNavigation();
         initNavigation();
 
         setupEventListeners();
@@ -66,13 +52,10 @@ export async function init() {
         const versionBadge = document.getElementById('versionBadge');
         if (versionBadge) {
             versionBadge.textContent = `v${getState().version}`;
-            versionBadge.textContent = `v${getState().version}`;
         }
 
         const githubLink = document.querySelector('.github-link');
-        const githubLink = document.querySelector('.github-link');
         if (githubLink) {
-            githubLink.href = `https://github.com/Masked-Kunsiquat/iou/tree/v${getState().version}`;
             githubLink.href = `https://github.com/Masked-Kunsiquat/iou/tree/v${getState().version}`;
         }
         
@@ -95,10 +78,6 @@ export async function loadData() {
     const persons = await db.getAll('persons');
     const transactions = await db.getAll('transactions');
     setState({ persons, transactions });
-export async function loadData() {
-    const persons = await db.getAll('persons');
-    const transactions = await db.getAll('transactions');
-    setState({ persons, transactions });
 }
 
 /**
@@ -113,8 +92,6 @@ function setupEventListeners() {
 
     const importBtn = document.getElementById('importBtn');
     if (importBtn) {
-        // Pass loadData directly, render will be triggered by setState within loadData.
-        importBtn.addEventListener('change', (e) => handleImport(e, loadData));
         // Pass loadData directly, render will be triggered by setState within loadData.
         importBtn.addEventListener('change', (e) => handleImport(e, loadData));
     }
