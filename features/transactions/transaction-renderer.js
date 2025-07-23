@@ -4,6 +4,7 @@ import { app } from '../../core/state.js';
 import { calculateBalance } from './transaction-utils.js';
 import { showPaymentModal, showTransactionDetails, showEditTransactionModal } from './transaction-modals.js';
 import { deleteTransaction } from '../actions.js';
+import { escapeHTML } from '../../ui/html-sanitizer.js';
 
 /**
  * Handles clicks on action buttons within a transaction card.
@@ -43,12 +44,17 @@ function renderTransaction(transaction) {
     const isPaid = balance === 0;
     const isOverdue = transaction.dueDate && new Date(transaction.dueDate) < new Date() && !isPaid;
 
+    // Sanitize user-provided data before rendering to prevent XSS
+    const firstName = escapeHTML(person?.firstName || '');
+    const lastName = escapeHTML(person?.lastName || '');
+    const description = escapeHTML(transaction.description || '');
+
     return `
     <div class="card" data-id="${transaction.id}">
       <div class="card-header">
         <div>
-          <div class="font-bold">${person?.firstName || ''} ${person?.lastName || ''}</div>
-          <div class="text-sm text-gray">${transaction.description}</div>
+          <div class="font-bold">${firstName} ${lastName}</div>
+          <div class="text-sm text-gray">${description}</div>
           <div class="text-xs text-gray mt-1">
             ${new Date(transaction.date).toLocaleDateString()}
             ${transaction.dueDate ? ` • Due: ${new Date(transaction.dueDate).toLocaleDateString()}` : ''}
@@ -78,6 +84,11 @@ function renderTransaction(transaction) {
 export function renderTransactionList(type) {
     const transactions = app.transactions.filter(t => t.type === type);
     const main = document.getElementById('main');
+    
+    if (!main) {
+        console.error('Fatal Error: The "main" element was not found in the DOM.');
+        return;
+    }
 
     main.innerHTML = `
     <h2 class="text-xl font-bold mb-4">${type === 'IOU' ? 'I Owe' : 'Owed to Me'}</h2>
