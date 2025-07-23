@@ -7,12 +7,11 @@ import { editPerson } from './person-modals.js';
 import { escapeHTML } from '../../ui/html-sanitizer.js';
 
 /**
- * Renders the list of all persons.
+ * Renders the list of all persons with added data validation.
  */
 export function renderPersons() {
     const main = document.getElementById('main');
 
-    // 1. Add null check for the main element
     if (!main) {
         console.error('Fatal Error: The "main" element was not found in the DOM.');
         return;
@@ -22,11 +21,13 @@ export function renderPersons() {
     <h2 class="text-xl font-bold mb-4">People</h2>
     <div class="list">
       ${app.persons.length === 0 ? '<p class="text-gray">No people added yet</p>' : ''}
-      ${app.persons.map(p => {
-        // 2. Validate required properties and 3. Sanitize data to prevent XSS
-        const firstName = escapeHTML(p.firstName || '');
-        const lastName = escapeHTML(p.lastName || '');
-        const phone = escapeHTML(formatPhone(p.phone || ''));
+      ${app.persons
+        .filter(p => p && p.id && p.firstName) // Ensure the person object and required fields exist
+        .map(p => {
+        // Sanitize data and provide fallbacks for optional fields
+        const firstName = escapeHTML(p.firstName); // Already ensured it exists by the filter
+        const lastName = escapeHTML(p.lastName || ''); // Fallback for optional last name
+        const phone = escapeHTML(formatPhone(p.phone || '')); // Fallback for optional phone
 
         return `
         <div class="list-item">
