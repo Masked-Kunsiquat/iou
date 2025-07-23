@@ -12,6 +12,7 @@ const urlsToCache = [
   // Core Modules
   './core/main.js',
   './core/state.js',
+  './core/constants.js',
 
   // UI Modules
   './ui/fab.js',
@@ -23,8 +24,13 @@ const urlsToCache = [
   // Feature Modules
   './features/actions.js',
   './features/import-export/data-service.js',
+  './features/persons/contact-helper.js',
   './features/persons/person-modals.js',
+  './features/persons/person-renderer.js', 
+  './features/stats/stats-renderer.js', 
   './features/transactions/transaction-modals.js',
+  './features/transactions/transaction-renderer.js',
+  './features/transactions/transaction-utils.js',
 
   // External CDN
   'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js'
