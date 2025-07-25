@@ -84,3 +84,57 @@ export function generateIOUs(splitTransaction) {
 
     return transactions;
 }
+
+export function generateIOUs(splitTransaction) {
+    const {
+        totalAmount,
+        payerId,
+        participants,
+        description,
+        date,
+        dueDate,
+        groupTag,
+        id: splitId
+    } = splitTransaction;
+    const shares = calculateShares(totalAmount, participants);
+    const transactions = [];
+
+    if (payerId === 'ME') {
+        shares.forEach(share => {
+            if (share.personId !== 'ME') {
+                transactions.push({
+                    id: self.crypto.randomUUID(),
+                    personId: share.personId,
+                    type: TRANSACTION_TYPES.UOM,
+                    amount: share.amount,
+                    description: `Split: ${description}`,
+                    date,
+                    dueDate,
+                    splitId,
+                    groupTag,
+                    payments: [],
+                    status: 'pending'
+                });
+            }
+        });
+    } else {
+        const myShare = shares.find(s => s.personId === 'ME');
+        if (myShare) {
+            transactions.push({
+                id: self.crypto.randomUUID(),
+                personId: payerId,
+                type: TRANSACTION_TYPES.IOU,
+                amount: myShare.amount,
+                description: `Split: ${description}`,
+                date,
+                dueDate,
+                splitId,
+                groupTag,
+                payments: [],
+                status: 'pending'
+            });
+        }
+    }
+
+    return transactions;
+}

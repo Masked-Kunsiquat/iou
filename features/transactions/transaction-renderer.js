@@ -14,7 +14,9 @@ import { formatCurrency } from '../../ui/currency.js';
 function handleTransactionAction(e) {
     const action = e.target.dataset.action;
     const id = e.target.dataset.id;
-    const { transactions } = getState();
+    const {
+        transactions
+    } = getState();
     const transaction = transactions.find(t => t.id === id);
 
     if (!transaction) return;
@@ -36,15 +38,67 @@ function handleTransactionAction(e) {
 }
 
 /**
- * Generates the HTML for a single transaction card.
+ * Renders the HTML for a single transaction card, with special rendering for SPLIT types.
  * @param {object} transaction - The transaction object to render.
+ * @param {Array<object>} persons - The array of all person objects.
  * @returns {string} HTML string for the transaction card.
  */
-function renderTransaction(transaction) {
+function renderTransaction(transaction, persons = []) {
+    if (transaction.type === 'SPLIT') {
+        const payer = transaction.payerId === 'ME' ? {
+            firstName: 'You'
+        } : persons.find(p => p.id === transaction.payerId);
+        const payerName = payer ? escapeHTML(`${payer.firstName} ${payer.lastName || ''}`.trim()) : 'Unknown';
+
+        const participantsHtml = transaction.participants.map(pId => {
+            const participant = pId === 'ME' ? {
+                firstName: 'You',
+                id: 'ME'
+            } : persons.find(p => p.id === pId);
+            if (!participant) return '';
+
+            const isPayer = participant.id === transaction.payerId;
+            const isMe = participant.id === 'ME';
+
+            // Custom styling for participants based on their role in the split
+            let style = 'background-color: #e5e7eb; color: #374151;'; // Default
+            if (isPayer) style = 'background-color: #dbeafe; color: #1e40af;'; // Payer: blue
+            if (isMe && !isPayer) style = 'background-color: #d1fae5; color: #065f46;'; // Me (not payer): green
+
+            return `<span class="text-xs font-semibold mr-2 px-2.5 py-0.5 rounded" style="${style}">${escapeHTML(participant.firstName)}</span>`;
+
+        }).join('');
+
+        return `
+        <div class="card" data-id="${transaction.id}">
+          <div class="card-header">
+            <div>
+              <div class="font-bold">${escapeHTML(transaction.description)}</div>
+              <div class="text-xs text-gray mt-1">${new Date(transaction.date).toLocaleDateString()}</div>
+            </div>
+            <div class="text-right">
+              <div class="font-bold">${formatCurrency(transaction.totalAmount)}</div>
+              <div class="text-xs text-gray">Total Split</div>
+            </div>
+          </div>
+          <div class="mt-2">
+            <p class="text-sm">Paid by: <strong>${payerName}</strong></p>
+            <div class="mt-2">
+              <p class="text-sm mb-2">Participants:</p>
+              <div class="flex flex-wrap gap-2">${participantsHtml}</div>
+            </div>
+          </div>
+          <div class="flex gap-2 mt-4">
+            <button class="btn btn-secondary text-sm text-red" data-action="delete" data-id="${transaction.id}">Delete</button>
+          </div>
+        </div>
+      `;
+    }
+
+    // Default rendering for standard IOU/UOM cards
     const balance = calculateBalance(transaction);
     const isPaid = balance === 0;
     const isOverdue = transaction.dueDate && new Date(transaction.dueDate) < new Date() && !isPaid;
-
     const description = escapeHTML(transaction.description || 'No Description');
 
     return `
@@ -76,109 +130,64 @@ function renderTransaction(transaction) {
 
 
 /**
- * Renders a list of transactions of a specific type ('IOU' or 'UOM').
- * @param {string} type - The type of transactions to render.
+ * Renders a list of transactions, grouping by tags and condensing splits into single cards.
+ * @param {string} type - The type of transactions to render ('IOU' or 'UOM').
  */
 export function renderTransactionList(type) {
-    const { transactions, persons, transactionSort, showPaid } = getState();
+    const {
+        transactions,
+        persons,
+        showPaid
+    } = getState();
     const main = document.getElementById('main');
-    
+
     if (!main) {
         console.error('Fatal Error: The "main" element was not found in the DOM.');
         return;
     }
 
-    // Get all transactions for the current type *before* applying visibility filters.
-    const allTransactionsForType = transactions.filter(t => t.type === type);
+    // 1. Filter for relevant child transactions (IOU or UOM)
+    const relevantChildTransactions = transactions.filter(t => t.type === type && (showPaid || calculateBalance(t) > 0));
 
-    // 1. Filter transactions by paid status
-    let filteredTransactions = allTransactionsForType;
-    if (!showPaid) {
-        filteredTransactions = filteredTransactions.filter(t => calculateBalance(t) > 0);
-    }
+    // 2. Identify master SPLIT transactions to show and standalone transactions
+    const splitIdsToShow = new Set(relevantChildTransactions.filter(t => t.splitId).map(t => t.splitId));
+    const standaloneTransactions = relevantChildTransactions.filter(t => !t.splitId);
+    const splitMasterTransactions = transactions.filter(t => t.type === 'SPLIT' && splitIdsToShow.has(t.id));
 
-    // 2. Group transactions by person
-    const transactionsByPerson = filteredTransactions.reduce((acc, t) => {
-        if (!acc[t.personId]) {
-            acc[t.personId] = [];
+    const displayItems = [...standaloneTransactions, ...splitMasterTransactions];
+
+    // 3. Group items by their groupTag
+    const itemsByGroup = displayItems.reduce((acc, item) => {
+        const groupKey = item.groupTag || 'Uncategorized';
+        if (!acc[groupKey]) {
+            acc[groupKey] = [];
         }
-        acc[t.personId].push(t);
+        acc[groupKey].push(item);
         return acc;
     }, {});
 
-    // 3. Sort the persons based on the chosen sort order
-    const sortedPersonIds = Object.keys(transactionsByPerson).sort((a, b) => {
-        const personA = persons.find(p => p.id === a);
-        const personB = persons.find(p => p.id === b);
-        if (!personA || !personB) return 0;
+    const sortedGroupKeys = Object.keys(itemsByGroup).sort((a, b) => a.localeCompare(b));
 
-        if (transactionSort.by === 'name') {
-            const nameA = `${personA.firstName} ${personA.lastName}`;
-            const nameB = `${personB.firstName} ${personB.lastName}`;
-            return transactionSort.order === 'asc' ? nameA.localeCompare(nameB) : nameB.localeCompare(nameA);
-        } else { // Date-based sorting
-            let dateA, dateB;
-            if (transactionSort.by === 'dueDate') {
-                // Get all valid due dates, convert to timestamps
-                const dueDatesA = transactionsByPerson[a].map(t => t.dueDate ? new Date(t.dueDate).getTime() : null).filter(Boolean);
-                const dueDatesB = transactionsByPerson[b].map(t => t.dueDate ? new Date(t.dueDate).getTime() : null).filter(Boolean);
-                
-                // If a person has no due dates, push them to the end when sorting
-                if (dueDatesA.length === 0 && dueDatesB.length > 0) return 1;
-                if (dueDatesB.length === 0 && dueDatesA.length > 0) return -1;
-                if (dueDatesA.length === 0 && dueDatesB.length === 0) return 0;
-                
-                dateA = transactionSort.order === 'asc' ? Math.min(...dueDatesA) : Math.max(...dueDatesA);
-                dateB = transactionSort.order === 'asc' ? Math.min(...dueDatesB) : Math.max(...dueDatesB);
-
-            } else { // Default to transactionDate
-                dateA = Math.max(...transactionsByPerson[a].map(t => new Date(t.date).getTime()));
-                dateB = Math.max(...transactionsByPerson[b].map(t => new Date(t.date).getTime()));
-            }
-
-            return transactionSort.order === 'asc' ? dateA - dateB : dateB - dateA;
-        }
-    });
-    
     // 4. Generate the final HTML
-    const listHtml = sortedPersonIds.map(personId => {
-        const person = persons.find(p => p.id === personId);
-        if (!person) return '';
+    const listHtml = sortedGroupKeys.map(groupKey => {
+        const groupItems = itemsByGroup[groupKey];
+        groupItems.sort((a, b) => new Date(b.date) - new Date(a.date));
 
-        const personTransactions = transactionsByPerson[personId];
-        // Sort transactions for each person by date (newest first)
-        personTransactions.sort((a, b) => new Date(b.date) - new Date(a.date));
-
-        const personHeader = `<h3 class="font-bold text-lg mt-4 mb-2">${escapeHTML(person.firstName)} ${escapeHTML(person.lastName)}</h3>`;
-        const transactionsHtml = personTransactions.map(t => renderTransaction(t)).join('');
-        return personHeader + transactionsHtml;
+        const groupHeader = `<h3 class="font-bold text-lg mt-4 mb-2">${escapeHTML(groupKey)}</h3>`;
+        const transactionsHtml = groupItems.map(t => renderTransaction(t, persons)).join('');
+        return groupHeader + transactionsHtml;
     }).join('');
-    
-    // Determine the correct empty state message based on context
+
     let emptyMessage = '';
-    if (listHtml.length === 0) {
-        if (allTransactionsForType.length === 0) {
-            emptyMessage = '<p class="text-gray">No transactions yet</p>';
-        } else {
-            emptyMessage = '<p class="text-gray">No transactions match your filters</p>';
-        }
+    if (displayItems.length === 0) {
+        emptyMessage = transactions.some(t => t.type === type) ?
+            '<p class="text-gray">No transactions match your filters</p>' :
+            '<p class="text-gray">No transactions yet</p>';
     }
 
     main.innerHTML = `
     <h2 class="text-xl font-bold mb-4">${type === 'IOU' ? 'I Owe' : 'Owed to Me'}</h2>
-    
     <div class="flex-between mb-4 flex-wrap gap-2">
-        <div>
-            <label for="sort-by" class="text-sm mr-2">Sort by:</label>
-            <select id="sort-by" class="select" style="width: auto;">
-                <option value="transactionDate_desc" ${transactionSort.by === 'transactionDate' && transactionSort.order === 'desc' ? 'selected' : ''}>Transaction Date (Newest)</option>
-                <option value="transactionDate_asc" ${transactionSort.by === 'transactionDate' && transactionSort.order === 'asc' ? 'selected' : ''}>Transaction Date (Oldest)</option>
-                <option value="dueDate_asc" ${transactionSort.by === 'dueDate' && transactionSort.order === 'asc' ? 'selected' : ''}>Due Date (Soonest)</option>
-                <option value="dueDate_desc" ${transactionSort.by === 'dueDate' && transactionSort.order === 'desc' ? 'selected' : ''}>Due Date (Latest)</option>
-                <option value="name_asc" ${transactionSort.by === 'name' && transactionSort.order === 'asc' ? 'selected' : ''}>Person (A-Z)</option>
-                <option value="name_desc" ${transactionSort.by === 'name' && transactionSort.order === 'desc' ? 'selected' : ''}>Person (Z-A)</option>
-            </select>
-        </div>
         <div>
             <label class="align-center flex">
                 <input type="checkbox" id="show-paid" class="mr-2" ${showPaid ? 'checked' : ''}>
@@ -186,20 +195,16 @@ export function renderTransactionList(type) {
             </label>
         </div>
     </div>
-
     <div class="list">
-      ${listHtml.length === 0 ? emptyMessage : listHtml}
+      ${listHtml.length > 0 ? listHtml : emptyMessage}
     </div>
   `;
 
-    // 5. Add event listeners for the new controls
-    document.getElementById('sort-by').addEventListener('change', (e) => {
-        const [by, order] = e.target.value.split('_');
-        setState({ transactionSort: { by, order } });
-    });
-
+    // 5. Add event listeners
     document.getElementById('show-paid').addEventListener('change', (e) => {
-        setState({ showPaid: e.target.checked });
+        setState({
+            showPaid: e.target.checked
+        });
     });
 
     main.querySelectorAll('[data-action]').forEach(el => {

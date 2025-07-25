@@ -20,18 +20,40 @@ export function initActions(dependencies) {
 }
 
 /**
- * Deletes a transaction after confirmation.
+ * Deletes a transaction after confirmation. If the transaction is a SPLIT,
+ * it also deletes all child transactions.
  * @param {string} transactionId - The ID of the transaction to delete.
  */
 export async function deleteTransaction(transactionId) {
-    const { transactions } = getState();
+    const {
+        transactions
+    } = getState();
     const transaction = transactions.find(t => t.id === transactionId);
     if (!transaction) return;
 
-    if (!showConfirm(`Delete this ${transaction.type}? This action cannot be undone.`)) return;
+    if (transaction.type === 'SPLIT') {
+        if (!showConfirm('Delete this entire split expense? This will remove all associated IOUs and UOMs. This action cannot be undone.')) return;
 
-    await db.delete('transactions', transaction.id);
+        // Find all child IOUs/UOMs linked to this split
+        const childTransactions = transactions.filter(t => t.splitId === transactionId);
+        const operations = [{
+            type: 'delete',
+            storeName: 'transactions',
+            key: transactionId
+        }, ...childTransactions.map(ct => ({
+            type: 'delete',
+            storeName: 'transactions',
+            key: ct.id
+        }))];
+        await db.transact(operations);
+
+    } else {
+        if (!showConfirm(`Delete this ${transaction.type}? This action cannot be undone.`)) return;
+        await db.delete('transactions', transaction.id);
+    }
+
     await loadData();
+    closeModal(); // Close any open modal
 }
 
 /**

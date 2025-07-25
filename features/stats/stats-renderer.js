@@ -37,7 +37,7 @@ function renderChart() {
         if (monthlyData[key]) {
             if (t.type === 'UOM') {
                 monthlyData[key].inflow += t.amount / 100;
-            } else {
+            } else if (t.type === 'IOU') {
                 monthlyData[key].outflow += t.amount / 100;
             }
         }

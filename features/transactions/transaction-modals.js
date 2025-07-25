@@ -223,6 +223,10 @@ export function showSplitExpenseModal() {
                 <label class="label">Description</label>
                 <input type="text" name="description" class="input" required>
             </div>
+            <div class="form-group">
+                <label class="label">Group Tag (optional)</label>
+                <input type="text" name="groupTag" class="input" placeholder="e.g., Vacation, Project X">
+            </div>
 
             <div class="form-group">
                 <label class="label">Who Paid?</label>
@@ -278,6 +282,7 @@ export function showSplitExpenseModal() {
             type: TRANSACTION_TYPES.SPLIT,
             totalAmount: Math.round(parseFloat(formData.get('totalAmount')) * 100),
             description: formData.get('description'),
+            groupTag: formData.get('groupTag') || null,
             date: new Date().toISOString().split('T')[0],
             payerId: formData.get('payerId'),
             participants, // Now an array of IDs
