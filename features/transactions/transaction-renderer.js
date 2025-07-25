@@ -88,8 +88,11 @@ export function renderTransactionList(type) {
         return;
     }
 
-    // 1. Filter transactions by type and paid status
-    let filteredTransactions = transactions.filter(t => t.type === type);
+    // Get all transactions for the current type *before* applying visibility filters.
+    const allTransactionsForType = transactions.filter(t => t.type === type);
+
+    // 1. Filter transactions by paid status
+    let filteredTransactions = allTransactionsForType;
     if (!showPaid) {
         filteredTransactions = filteredTransactions.filter(t => calculateBalance(t) > 0);
     }
@@ -120,9 +123,10 @@ export function renderTransactionList(type) {
                 const dueDatesA = transactionsByPerson[a].map(t => t.dueDate ? new Date(t.dueDate).getTime() : null).filter(Boolean);
                 const dueDatesB = transactionsByPerson[b].map(t => t.dueDate ? new Date(t.dueDate).getTime() : null).filter(Boolean);
                 
-                // If a person has no due dates, push them to the end
-                if (dueDatesA.length === 0) return 1;
-                if (dueDatesB.length === 0) return -1;
+                // If a person has no due dates, push them to the end when sorting
+                if (dueDatesA.length === 0 && dueDatesB.length > 0) return 1;
+                if (dueDatesB.length === 0 && dueDatesA.length > 0) return -1;
+                if (dueDatesA.length === 0 && dueDatesB.length === 0) return 0;
                 
                 dateA = transactionSort.order === 'asc' ? Math.min(...dueDatesA) : Math.max(...dueDatesA);
                 dateB = transactionSort.order === 'asc' ? Math.min(...dueDatesB) : Math.max(...dueDatesB);
@@ -132,7 +136,7 @@ export function renderTransactionList(type) {
                 dateB = Math.max(...transactionsByPerson[b].map(t => new Date(t.date).getTime()));
             }
 
-            return transactionSort.order === 'asc' ? dateA - dateB : dateB - a;
+            return transactionSort.order === 'asc' ? dateA - dateB : dateB - dateA;
         }
     });
     
@@ -142,7 +146,7 @@ export function renderTransactionList(type) {
         if (!person) return '';
 
         const personTransactions = transactionsByPerson[personId];
-        // Sort transactions for each person by date
+        // Sort transactions for each person by date (newest first)
         personTransactions.sort((a, b) => new Date(b.date) - new Date(a.date));
 
         const personHeader = `<h3 class="font-bold text-lg mt-4 mb-2">${escapeHTML(person.firstName)} ${escapeHTML(person.lastName)}</h3>`;
@@ -150,10 +154,10 @@ export function renderTransactionList(type) {
         return personHeader + transactionsHtml;
     }).join('');
     
-    // Determine the correct empty state message
+    // Determine the correct empty state message based on context
     let emptyMessage = '';
     if (listHtml.length === 0) {
-        if (transactions.length === 0) {
+        if (allTransactionsForType.length === 0) {
             emptyMessage = '<p class="text-gray">No transactions yet</p>';
         } else {
             emptyMessage = '<p class="text-gray">No transactions match your filters</p>';
@@ -165,12 +169,12 @@ export function renderTransactionList(type) {
     
     <div class="flex-between mb-4 flex-wrap gap-2">
         <div>
-            <label for="sort-by" class="text-sm">Sort by:</label>
+            <label for="sort-by" class="text-sm mr-2">Sort by:</label>
             <select id="sort-by" class="select" style="width: auto;">
                 <option value="transactionDate_desc" ${transactionSort.by === 'transactionDate' && transactionSort.order === 'desc' ? 'selected' : ''}>Transaction Date (Newest)</option>
                 <option value="transactionDate_asc" ${transactionSort.by === 'transactionDate' && transactionSort.order === 'asc' ? 'selected' : ''}>Transaction Date (Oldest)</option>
-                <option value="dueDate_desc" ${transactionSort.by === 'dueDate' && transactionSort.order === 'desc' ? 'selected' : ''}>Due Date (Newest)</option>
-                <option value="dueDate_asc" ${transactionSort.by === 'dueDate' && transactionSort.order === 'asc' ? 'selected' : ''}>Due Date (Oldest)</option>
+                <option value="dueDate_asc" ${transactionSort.by === 'dueDate' && transactionSort.order === 'asc' ? 'selected' : ''}>Due Date (Soonest)</option>
+                <option value="dueDate_desc" ${transactionSort.by === 'dueDate' && transactionSort.order === 'desc' ? 'selected' : ''}>Due Date (Latest)</option>
                 <option value="name_asc" ${transactionSort.by === 'name' && transactionSort.order === 'asc' ? 'selected' : ''}>Person (A-Z)</option>
                 <option value="name_desc" ${transactionSort.by === 'name' && transactionSort.order === 'desc' ? 'selected' : ''}>Person (Z-A)</option>
             </select>
