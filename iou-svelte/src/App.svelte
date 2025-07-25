@@ -2,7 +2,13 @@
   import { onMount } from 'svelte';
   import { persons, transactions } from './lib/stores.js';
   import { db } from './lib/db.js';
-  import './app.css'; // Import global CSS directly in the script section
+  import './app.css';
+  import PersonList from './lib/components/PersonList.svelte';
+  import PersonModal from './lib/components/PersonModal.svelte';
+  import { Button } from 'flowbite-svelte';
+
+  let showPersonModal = false;
+  let selectedPerson = null;
 
   onMount(async () => {
     await db.init();
@@ -16,6 +22,25 @@
     console.log('Database initialized and data loaded!');
   });
 
+  async function handleSavePerson(person) {
+    if (person.id) {
+      // Update
+      await db.put('persons', person);
+    } else {
+      // Create
+      await db.put('persons', { ...person, id: self.crypto.randomUUID() });
+    }
+    const personData = await db.getAll('persons');
+    persons.set(personData);
+  }
+
+  /**
+   * Click event handler to open the person modal.
+   * @param {MouseEvent} event
+   */
+  function openPersonModal(event) {
+    showPersonModal = true;
+  }
 </script>
 
 <div class="min-h-screen flex flex-col bg-gray-100 dark:bg-gray-900">
@@ -29,6 +54,7 @@
       >
         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m4 6h16"></path></svg>
       </button>
+    
     </nav>
   </header>
 
@@ -36,10 +62,16 @@
     <h2 class="text-2xl font-semibold mb-4 text-gray-800 dark:text-white">People</h2>
     
     <div class="bg-white rounded-lg shadow-md p-4">
-      <p>Person list will go here...</p>
+      <PersonList />
     </div>
 
   </main>
+
+  <div class="fixed bottom-6 right-6">
+      <Button onclick={openPersonModal}>Add Person</Button>
+  </div>
+
+  <PersonModal bind:open={showPersonModal} onSave={handleSavePerson} />
 
   <footer class="bg-gray-200 dark:bg-gray-800 text-center p-4">
     <a href="https://github.com/Masked-Kunsiquat/iou" target="_blank" rel="noopener noreferrer" class="text-sm text-gray-600 dark:text-gray-400 hover:underline">
