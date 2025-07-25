@@ -10,4 +10,5 @@ export const VIEWS = {
 export const TRANSACTION_TYPES = {
   IOU: 'IOU',
   UOM: 'UOM',
+  SPLIT: 'SPLIT',
 };

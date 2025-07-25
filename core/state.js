@@ -18,6 +18,10 @@ const _state = {
         order: 'desc' // 'asc', 'desc'
     },
     showPaid: false,
+    splitSort: {
+        by: 'date',
+        order: 'desc'
+    }
 };
 
 // A list of listener functions to be called when the state changes.
