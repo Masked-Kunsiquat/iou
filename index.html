@@ -7,10 +7,12 @@
   <link rel="stylesheet" href="styles.css">
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#1e40af">
+  
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/flowbite/2.3.0/flowbite.min.css" rel="stylesheet" />
+
 </head>
 <body>
   <div id="app" class="app">
-    <!-- Header -->
     <header class="header">
       <h1 class="text-xl font-bold">IOU Tracker</h1>
       <div class="flex gap-2 align-center">
@@ -19,7 +21,6 @@
       </div>
     </header>
 
-    <!-- Navigation -->
     <nav id="nav" class="nav hidden">
       <a href="#iou" class="nav-link">I Owe (IOU)</a>
       <a href="#uom" class="nav-link">Owed to Me (UOM)</a>
@@ -33,12 +34,9 @@
       </label>
     </nav>
 
-    <!-- Main Content -->
     <main id="main" class="main">
-      <!-- Content injected by JavaScript -->
-    </main>
+      </main>
 
-    <!-- Footer with GitHub Link -->
     <footer class="footer">
       <div class="footer-content">
         <a href="https://github.com/Masked-Kunsiquat/iou" 
@@ -55,10 +53,8 @@
       </div>
     </footer>
 
-    <!-- Floating Action Button -->
     <button id="fab" class="fab">+</button>
 
-    <!-- Modal Container -->
     <div id="modal" class="modal hidden">
       <div class="modal-content">
         <div class="modal-header">
@@ -71,6 +67,9 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/flowbite/2.3.0/flowbite.min.js"></script>
+
   <script type="module" src="app.js"></script>
 </body>
 </html>
