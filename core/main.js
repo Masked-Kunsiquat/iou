@@ -59,8 +59,8 @@ export async function init() {
             githubLink.href = `https://github.com/Masked-Kunsiquat/iou/tree/v${getState().version}`;
         }
         
-        // Initial render is handled by the navigation router (ui/navigation.js),
-        // which sets the initial view and triggers the first render.
+        // Initial render is now handled by the router, which calls setState
+        // No need to call render() here.
     } catch (error) {
         console.error("Failed to initialize the app:", error);
         // Optionally, display an error message to the user
