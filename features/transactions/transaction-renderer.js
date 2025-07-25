@@ -132,7 +132,7 @@ export function renderTransactionList(type) {
                 dateB = Math.max(...transactionsByPerson[b].map(t => new Date(t.date).getTime()));
             }
 
-            return transactionSort.order === 'asc' ? dateA - dateB : dateB - dateA;
+            return transactionSort.order === 'asc' ? dateA - dateB : dateB - a;
         }
     });
     
@@ -149,6 +149,16 @@ export function renderTransactionList(type) {
         const transactionsHtml = personTransactions.map(t => renderTransaction(t)).join('');
         return personHeader + transactionsHtml;
     }).join('');
+    
+    // Determine the correct empty state message
+    let emptyMessage = '';
+    if (listHtml.length === 0) {
+        if (transactions.length === 0) {
+            emptyMessage = '<p class="text-gray">No transactions yet</p>';
+        } else {
+            emptyMessage = '<p class="text-gray">No transactions match your filters</p>';
+        }
+    }
 
     main.innerHTML = `
     <h2 class="text-xl font-bold mb-4">${type === 'IOU' ? 'I Owe' : 'Owed to Me'}</h2>
@@ -174,7 +184,7 @@ export function renderTransactionList(type) {
     </div>
 
     <div class="list">
-      ${listHtml.length === 0 ? '<p class="text-gray">No transactions yet</p>' : listHtml}
+      ${listHtml.length === 0 ? emptyMessage : listHtml}
     </div>
   `;
 
