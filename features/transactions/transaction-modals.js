@@ -10,7 +10,8 @@ import { formatCurrency } from '../../ui/currency.js';
 import { generateIOUs } from './split-utils.js';
 import { TRANSACTION_TYPES } from '../../core/constants.js';
 import { showPersonModal } from '../persons/person-modals.js';
-import { showConfirm } from '../../ui/notifications.js';
+import { showAlert, showConfirm } from '../../ui/notifications.js';
+
 
 let loadData;
 
@@ -164,7 +165,6 @@ export function showEditTransactionModal(transaction) {
         return `<option value="${p.id}" ${p.id === transaction.personId ? 'selected' : ''}>${firstName} ${lastName}</option>`
     }).join('');
     
-    // 4. Sanitize the description before placing it in the input's value
     const safeDescription = escapeHTML(transaction.description || '');
 
     showModal(`Edit ${transaction.type}`, `
@@ -258,7 +258,6 @@ export function showSplitExpenseModal() {
         </form>
     `);
 
-    // --- NEW "USUAL SUSPECTS" LOGIC ---
     const groupTagInput = document.querySelector('[name="groupTag"]');
     groupTagInput.addEventListener('change', (e) => {
         const tag = e.target.value.trim();
@@ -272,9 +271,7 @@ export function showSplitExpenseModal() {
             .sort((a, b) => new Date(b.date) - new Date(a.date))[0];
 
         if (lastSplitInGroup && lastSplitInGroup.participants) {
-            // Uncheck all participants first
             document.querySelectorAll('[name="participants"]').forEach(cb => cb.checked = false);
-            // Check the usual suspects
             lastSplitInGroup.participants.forEach(pId => {
                 const checkbox = document.querySelector(`[name="participants"][value="${pId}"]`);
                 if (checkbox) {
@@ -294,13 +291,20 @@ export function showSplitExpenseModal() {
         const formData = new FormData(e.target);
         const participantNodes = document.querySelectorAll('[name="participants"]:checked');
         const participants = Array.from(participantNodes).map(node => node.value);
+        const payerId = formData.get('payerId');
 
+        // --- CORRECTED LOGIC ---
+        // Automatically include the payer as a participant.
+        // Using a Set handles cases where the payer is also checked in the list, preventing duplicates.
+        const allParticipants = new Set(participants);
+        allParticipants.add(payerId);
+        const finalParticipants = Array.from(allParticipants);
+        // --- END OF CORRECTION ---
 
-        if (participants.length < 2) {
-            showAlert('Please select at least two participants.');
+        if (finalParticipants.length < 2) {
+            showAlert('Please select at least two participants. The payer is automatically included.');
             return;
         }
-
 
         const splitTransaction = {
             id: generateUUID(),
@@ -309,8 +313,8 @@ export function showSplitExpenseModal() {
             description: formData.get('description'),
             groupTag: formData.get('groupTag') || null,
             date: new Date().toISOString().split('T')[0],
-            payerId: formData.get('payerId'),
-            participants, // Now an array of IDs
+            payerId: payerId,
+            participants: finalParticipants, // Use the corrected list of participants
             splitType: formData.get('splitType'),
         };
 
@@ -374,7 +378,6 @@ export async function showGroupSettlementModal(groupTag) {
 
     showModal('Settle Group', summaryHtml);
 
-    // Add a confirmation button to the modal body
     const modalBody = document.getElementById('modalBody');
     const confirmButton = document.createElement('button');
     confirmButton.textContent = 'Confirm & Settle';
