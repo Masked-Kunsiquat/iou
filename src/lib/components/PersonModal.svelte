@@ -1,10 +1,12 @@
 <script>
 	import { Modal, Input, Button } from 'flowbite-svelte';
-	import { createEventDispatcher } from 'svelte';
 
-	let { show = $bindable(false), person = {} } = $props();
-
-	const dispatch = createEventDispatcher();
+	// The `onSave` prop is now a function passed by the parent.
+	let {
+		show = $bindable(false),
+		person = {},
+		onSave = (/** @type {{id: string|null, name: string, phone: string}} */ data) => {}
+	} = $props();
 
 	let formData = $state({
 		id: person?.id || null,
@@ -16,8 +18,8 @@
 	 * @param {SubmitEvent} event
 	 */
 	function handleSubmit(event) {
-		event.preventDefault(); // Manually prevent form submission
-		dispatch('save', formData);
+		event.preventDefault();
+		onSave(formData); // Call the onSave prop directly
 		closeModal();
 	}
 
@@ -25,8 +27,6 @@
 		show = false;
 	}
 
-	// When the person prop changes (i.e., when opening the modal to edit),
-	// update the form data.
 	$effect(() => {
 		formData = {
 			id: person?.id || null,
