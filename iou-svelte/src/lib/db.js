@@ -44,7 +44,7 @@ export class DB {
       };
 
       request.onupgradeneeded = (event) => {
-        const db = event.target.result;
+        const db = /** @type {IDBOpenDBRequest} */ (event.target).result;
         
         if (!db.objectStoreNames.contains('persons')) {
           db.createObjectStore('persons', { keyPath: 'id' });
@@ -65,7 +65,7 @@ export class DB {
    * @returns {Promise<void>} A promise that resolves if the transaction is successful, and rejects if it fails.
    */
   async transact(operations) {
-    if (!this.isIDBSupported) {
+    if (!this.isIDBSupported || !this.db) {
       console.warn('Atomic transactions are not supported with localStorage fallback. Executing sequentially.');
       // Fallback for localStorage: execute one by one without atomicity.
       try {
@@ -83,7 +83,7 @@ export class DB {
 
     return new Promise((resolve, reject) => {
         const transaction = this.db.transaction(storeNames, 'readwrite');
-        transaction.oncomplete = resolve;
+        transaction.oncomplete = () => resolve();
         transaction.onerror = () => reject(transaction.error);
 
         for (const op of operations) {
@@ -104,7 +104,7 @@ export class DB {
    * @returns {Promise<any>} A promise that resolves with the retrieved record, or undefined if not found.
    */
   async get(storeName, key) {
-    if (!this.isIDBSupported) {
+    if (!this.isIDBSupported || !this.db) {
       return this._localStorageGet(storeName, key);
     }
 
@@ -124,7 +124,7 @@ export class DB {
    * @returns {Promise<any[]>} A promise that resolves with an array of all records in the store.
    */
   async getAll(storeName) {
-    if (!this.isIDBSupported) {
+    if (!this.isIDBSupported || !this.db) {
       return this._localStorageGetAll(storeName);
     }
 
@@ -145,7 +145,7 @@ export class DB {
    * @returns {Promise<any>} A promise that resolves with the key of the stored record.
    */
   async put(storeName, value) {
-    if (!this.isIDBSupported) {
+    if (!this.isIDBSupported || !this.db) {
       return this._localStoragePut(storeName, value);
     }
 
@@ -166,7 +166,7 @@ export class DB {
    * @returns {Promise<void>} A promise that resolves when the record is successfully deleted.
    */
   async delete(storeName, key) {
-    if (!this.isIDBSupported) {
+    if (!this.isIDBSupported || !this.db) {
       return this._localStorageDelete(storeName, key);
     }
 
@@ -186,7 +186,7 @@ export class DB {
    * @returns {Promise<void>} A promise that resolves when the store is successfully cleared.
    */
   async clear(storeName) {
-    if (!this.isIDBSupported) {
+    if (!this.isIDBSupported || !this.db) {
       return this._localStorageClear(storeName);
     }
 
@@ -202,36 +202,16 @@ export class DB {
 
   // localStorage fallback methods
 
-  /**
-   * @private
-   * Retrieves a single item from localStorage.
-   * @param {string} storeName - The key used for the localStorage item.
-   * @param {string} key - The key of the object to retrieve.
-   * @returns {any} The retrieved object, or undefined if not found.
-   */
   _localStorageGet(storeName, key) {
     const data = JSON.parse(localStorage.getItem(storeName) || '{}');
     return data[key];
   }
 
-  /**
-   * @private
-   * Retrieves all items from a localStorage entry.
-   * @param {string} storeName - The key used for the localStorage item.
-   * @returns {any[]} An array of all objects.
-   */
   _localStorageGetAll(storeName) {
     const data = JSON.parse(localStorage.getItem(storeName) || '{}');
     return Object.values(data);
   }
 
-  /**
-   * @private
-   * Adds or updates an item in localStorage.
-   * @param {string} storeName - The key used for the localStorage item.
-   * @param {object} value - The object to store. It must have an 'id' property.
-   * @returns {string} The id of the stored item.
-   */
   _localStoragePut(storeName, value) {
     const data = JSON.parse(localStorage.getItem(storeName) || '{}');
     data[value.id] = value;
@@ -239,23 +219,12 @@ export class DB {
     return value.id;
   }
 
-  /**
-   * @private
-   * Deletes an item from localStorage.
-   * @param {string} storeName - The key used for the localStorage item.
-   * @param {string} key - The key of the object to delete.
-   */
   _localStorageDelete(storeName, key) {
     const data = JSON.parse(localStorage.getItem(storeName) || '{}');
     delete data[key];
     localStorage.setItem(storeName, JSON.stringify(data));
   }
-
-  /**
-   * @private
-   * Clears all data from a localStorage item.
-   * @param {string} storeName - The key used for the localStorage item.
-   */
+  
   _localStorageClear(storeName) {
     localStorage.removeItem(storeName);
   }
