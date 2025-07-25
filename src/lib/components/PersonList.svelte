@@ -1,24 +1,37 @@
-<script>
+<script lang="ts"> // Add lang="ts" to enable TypeScript in the script block
 	import { List, Li, Button } from 'flowbite-svelte';
 	import { UserEditSolid, TrashBinSolid } from 'flowbite-svelte-icons';
-	import { persons } from '$lib/stores.js';
+	import { db } from '$lib/db.js';
+	import { persons, transactions } from '$lib/stores.js';
 
-	/**
-	 * Handles the edit action for a person.
-	 * @param {any} personId - The ID of the person to edit.
-	 */
-	function handleEdit(personId) {
-		console.log('Editing person:', personId);
-		alert(`Editing person ID: ${personId}`);
+	// Define an interface for the component's props
+	interface PersonListProps {
+		onEdit: (person: any) => void;
 	}
 
+	// Use the interface with $props()
+	const { onEdit }: PersonListProps = $props();
+
 	/**
-	 * Handles the delete action for a person.
-	 * @param {any} personId - The ID of the person to delete.
+	 * Handles deleting a person after checking for dependencies.
+	 * @param {string} personId - The ID of the person to delete.
 	 */
-	function handleDelete(personId) {
-		console.log('Deleting person:', personId);
-		alert(`Deleting person ID: ${personId}`);
+	async function handleDelete(personId: string) { // Explicitly type personId
+		const hasTransactions = $transactions.some((t) => t.personId === personId); //
+		if (hasTransactions) { //
+			alert('Cannot delete person with existing transactions. Please delete their transactions first.'); //
+			return; //
+		}
+
+		if (confirm('Are you sure you want to delete this person?')) {
+			try {
+				await db.delete('persons', personId); //
+				persons.update((p) => p.filter((person) => person.id !== personId)); //
+			} catch (e) {
+				console.error('Failed to delete person:', e); //
+				alert('There was an error deleting the person.'); //
+			}
+		}
 	}
 </script>
 
@@ -45,7 +58,7 @@
 							</p>
 						</div>
 						<div class="inline-flex items-center space-x-2">
-							<Button size="sm" onclick={() => handleEdit(person.id)}>
+							<Button size="sm" onclick={() => onEdit(person)}>
 								<UserEditSolid class="w-4 h-4 me-1" />
 								Edit
 							</Button>
