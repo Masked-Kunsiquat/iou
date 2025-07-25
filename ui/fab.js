@@ -1,10 +1,8 @@
-/**
- * @file Manages the Floating Action Button (FAB).
- */
+// ui/fab.js
 
 import { getState } from '../core/state.js';
 import { showPersonModal } from '../features/persons/person-modals.js';
-import { showTransactionModal } from '../features/transactions/transaction-modals.js';
+import { showAddTransactionModal } from '../features/transactions/add-edit-transaction-modal.js';
 
 /**
  * Initializes the FAB and its event listener.
@@ -20,14 +18,16 @@ export function initFab() {
 
 /**
  * Handles the click event on the FAB.
- * It shows the appropriate modal based on the current view.
+ * It determines which modal content to load based on the current view.
+ * Flowbite's data-modal-toggle attribute handles the actual showing of the modal.
  */
 function handleFabClick() {
   const { currentView } = getState();
   if (currentView === 'persons') {
-    showPersonModal();
+    // This function now correctly just injects the HTML
+    showPersonModal(); 
   } else {
-    showTransactionModal(currentView);
+    showAddTransactionModal(currentView);
   }
 }
 

@@ -2,5 +2,7 @@
 
 import { init } from './core/main.js';
 
-// Initialize the app when the script loads
-init();
+// Wait for the DOM to be fully loaded before initializing the app.
+// This ensures that all scripts, including the Flowbite CDN script,
+// are available before our code tries to use them.
+document.addEventListener('DOMContentLoaded', init);

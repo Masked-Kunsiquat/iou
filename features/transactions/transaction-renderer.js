@@ -2,7 +2,8 @@
 
 import { getState, setState } from '../../core/state.js';
 import { calculateBalance } from './transaction-utils.js';
-import { showPaymentModal, showTransactionDetails, showEditTransactionModal } from './transaction-modals.js';
+import { showPaymentModal, showTransactionDetails } from './transaction-modals.js';
+import { showEditTransactionModal } from './add-edit-transaction-modal.js';
 import { deleteTransaction } from '../actions.js';
 import { escapeHTML } from '../../ui/html-sanitizer.js';
 import { formatCurrency } from '../../ui/currency.js';
