@@ -10,6 +10,7 @@ import { formatCurrency } from '../../ui/currency.js';
 import { generateIOUs } from './split-utils.js';
 import { TRANSACTION_TYPES } from '../../core/constants.js';
 import { showPersonModal } from '../persons/person-modals.js';
+import { showConfirm } from '../../ui/notifications.js';
 
 let loadData;
 
@@ -257,6 +258,32 @@ export function showSplitExpenseModal() {
         </form>
     `);
 
+    // --- NEW "USUAL SUSPECTS" LOGIC ---
+    const groupTagInput = document.querySelector('[name="groupTag"]');
+    groupTagInput.addEventListener('change', (e) => {
+        const tag = e.target.value.trim();
+        if (!tag) return;
+
+        const {
+            transactions
+        } = getState();
+        const lastSplitInGroup = transactions
+            .filter(t => t.type === 'SPLIT' && t.groupTag === tag)
+            .sort((a, b) => new Date(b.date) - new Date(a.date))[0];
+
+        if (lastSplitInGroup && lastSplitInGroup.participants) {
+            // Uncheck all participants first
+            document.querySelectorAll('[name="participants"]').forEach(cb => cb.checked = false);
+            // Check the usual suspects
+            lastSplitInGroup.participants.forEach(pId => {
+                const checkbox = document.querySelector(`[name="participants"][value="${pId}"]`);
+                if (checkbox) {
+                    checkbox.checked = true;
+                }
+            });
+        }
+    });
+
     document.getElementById('addNewPersonBtn').addEventListener('click', () => {
         showPersonModal();
     });
@@ -303,4 +330,78 @@ export function showSplitExpenseModal() {
         await loadData();
         closeModal();
     });
+}
+
+/**
+ * Shows a modal to settle all debts within a specific groupTag.
+ * @param {string} groupTag - The group tag to settle.
+ */
+export async function showGroupSettlementModal(groupTag) {
+    const {
+        transactions
+    } = getState();
+    const groupTransactions = transactions.filter(t =>
+        (t.type === 'IOU' || t.type === 'UOM') &&
+        t.groupTag === groupTag &&
+        calculateBalance(t) > 0
+    );
+
+    if (groupTransactions.length === 0) {
+        showAlert('There are no outstanding debts to settle in this group.');
+        return;
+    }
+
+    const totalOwedToMe = groupTransactions
+        .filter(t => t.type === 'UOM')
+        .reduce((sum, t) => sum + calculateBalance(t), 0);
+
+    const totalIOwe = groupTransactions
+        .filter(t => t.type === 'IOU')
+        .reduce((sum, t) => sum + calculateBalance(t), 0);
+
+    const netBalance = totalOwedToMe - totalIOwe;
+
+    const summaryHtml = `
+        <div class="mb-4">
+            You are about to settle all outstanding debts in the group: <strong>${escapeHTML(groupTag)}</strong>
+        </div>
+        <div class="stat-card mb-4">
+            <div class="stat-value ${netBalance >= 0 ? 'text-green' : 'text-red'}">${formatCurrency(netBalance)}</div>
+            <div class="stat-label">Your Net Position</div>
+        </div>
+        <p class="text-sm text-gray">This will mark ${groupTransactions.length} transaction(s) as paid by creating settlement payments. This action cannot be undone.</p>
+    `;
+
+    showModal('Settle Group', summaryHtml);
+
+    // Add a confirmation button to the modal body
+    const modalBody = document.getElementById('modalBody');
+    const confirmButton = document.createElement('button');
+    confirmButton.textContent = 'Confirm & Settle';
+    confirmButton.className = 'btn w-full mt-4';
+    confirmButton.onclick = async () => {
+        const operations = groupTransactions.map(t => {
+            const balance = calculateBalance(t);
+            const settlementPayment = {
+                id: generateUUID(),
+                amount: balance,
+                date: new Date().toISOString(),
+                note: `Group settlement for "${groupTag}"`
+            };
+            const updatedTransaction = { ...t
+            };
+            updatedTransaction.payments = [...(t.payments || []), settlementPayment];
+            updatedTransaction.status = 'paid';
+            return {
+                type: 'put',
+                storeName: 'transactions',
+                value: updatedTransaction
+            };
+        });
+
+        await db.transact(operations);
+        await loadData();
+        closeModal();
+    };
+    modalBody.appendChild(confirmButton);
 }

@@ -25,6 +25,32 @@ export async function exportData() {
 }
 
 /**
+ * Validates the structure of a single transaction object.
+ * @param {object} t - The transaction object.
+ * @returns {boolean} - True if the transaction is valid, false otherwise.
+ */
+function isValidTransaction(t) {
+    if (!t || !t.id || !t.type) return false;
+
+    const hasBaseFields = typeof t.description === 'string' && typeof t.date === 'string';
+    if (!hasBaseFields) return false;
+
+    switch (t.type) {
+        case TRANSACTION_TYPES.SPLIT:
+            return typeof t.totalAmount === 'number' &&
+                typeof t.payerId === 'string' &&
+                Array.isArray(t.participants);
+        case TRANSACTION_TYPES.IOU:
+        case TRANSACTION_TYPES.UOM:
+            return typeof t.personId === 'string' &&
+                typeof t.amount === 'number' &&
+                Array.isArray(t.payments);
+        default:
+            return false;
+    }
+}
+
+/**
  * Imports data from a JSON file, either merging or replacing existing data.
  * @param {Event} e - The file input change event.
  * @param {Function} loadData - Function to reload data from the database and update state.
@@ -33,29 +59,31 @@ export async function handleImport(e, loadData) {
     const file = e.target.files[0];
     if (!file) return;
 
-    // 1. Add file type validation for security.
     if (file.type !== 'application/json') {
         showAlert('Invalid file type. Please select a .json file.');
-        e.target.value = ''; // Reset file input
+        e.target.value = '';
         return;
     }
-
 
     const reader = new FileReader();
     reader.onload = async (event) => {
         try {
             const data = JSON.parse(event.target.result);
 
-            // 2. Add data structure validation.
             if (!data || !Array.isArray(data.persons) || !Array.isArray(data.transactions)) {
-                throw new Error('Invalid data structure in JSON file. Required keys: "persons", "transactions".');
+                throw new Error('Invalid data structure. Required keys: "persons", "transactions".');
             }
+
+            // Validate every transaction before proceeding
+            for (const t of data.transactions) {
+                if (!isValidTransaction(t)) {
+                    throw new Error(`Invalid transaction object found with id: ${t.id || 'N/A'}`);
+                }
+            }
+
 
             const shouldMerge = showConfirm('Merge with existing data? (Cancel to replace all data)');
 
-            // 3. Add better error recovery.
-            // By validating the structure first, we reduce the risk of partial writes.
-            // A true transaction would require changes to db.js, but this is an improvement.
             if (!shouldMerge) {
                 await db.clear('persons');
                 await db.clear('transactions');
@@ -68,11 +96,9 @@ export async function handleImport(e, loadData) {
             showAlert('Data imported successfully!');
         } catch (err) {
             showAlert('Error importing data: ' + err.message);
-            // It's good practice to reload data to ensure the app state reflects the database
-            // state, even if the import failed.
             await loadData();
         } finally {
-            e.target.value = ''; // Reset file input
+            e.target.value = '';
         }
     };
     reader.readAsText(file);

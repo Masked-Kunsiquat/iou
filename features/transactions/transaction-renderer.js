@@ -128,77 +128,35 @@ function renderTransaction(transaction, persons = []) {
   `;
 }
 
-
 /**
  * Renders a list of transactions, grouping by tags and condensing splits into single cards.
  * @param {string} type - The type of transactions to render ('IOU' or 'UOM').
  */
 export function renderTransactionList(type) {
-    const {
-        transactions,
-        persons,
-        showPaid
-    } = getState();
-    const main = document.getElementById('main');
-
-    if (!main) {
-        console.error('Fatal Error: The "main" element was not found in the DOM.');
-        return;
-    }
-
-    // 1. Filter for relevant child transactions (IOU or UOM)
-    const relevantChildTransactions = transactions.filter(t => t.type === type && (showPaid || calculateBalance(t) > 0));
-
-    // 2. Identify master SPLIT transactions to show and standalone transactions
-    const splitIdsToShow = new Set(relevantChildTransactions.filter(t => t.splitId).map(t => t.splitId));
-    const standaloneTransactions = relevantChildTransactions.filter(t => !t.splitId);
-    const splitMasterTransactions = transactions.filter(t => t.type === 'SPLIT' && splitIdsToShow.has(t.id));
-
-    const displayItems = [...standaloneTransactions, ...splitMasterTransactions];
-
-    // 3. Group items by their groupTag
-    const itemsByGroup = displayItems.reduce((acc, item) => {
-        const groupKey = item.groupTag || 'Uncategorized';
-        if (!acc[groupKey]) {
-            acc[groupKey] = [];
-        }
-        acc[groupKey].push(item);
-        return acc;
-    }, {});
-
-    const sortedGroupKeys = Object.keys(itemsByGroup).sort((a, b) => a.localeCompare(b));
+    //... (keep the top part of the function)
 
     // 4. Generate the final HTML
     const listHtml = sortedGroupKeys.map(groupKey => {
         const groupItems = itemsByGroup[groupKey];
         groupItems.sort((a, b) => new Date(b.date) - new Date(a.date));
 
-        const groupHeader = `<h3 class="font-bold text-lg mt-4 mb-2">${escapeHTML(groupKey)}</h3>`;
+        // Add a settle button if the group is not 'Uncategorized'
+        const settleButton = groupKey !== 'Uncategorized' ?
+            `<button class="btn btn-secondary text-sm" data-action="settle-group" data-group-tag="${escapeHTML(groupKey)}">Settle Group</button>` :
+            '';
+
+        const groupHeader = `
+            <div class="flex-between mt-4 mb-2">
+                <h3 class="font-bold text-lg">${escapeHTML(groupKey)}</h3>
+                ${settleButton}
+            </div>
+        `;
+
         const transactionsHtml = groupItems.map(t => renderTransaction(t, persons)).join('');
         return groupHeader + transactionsHtml;
     }).join('');
 
-    let emptyMessage = '';
-    if (displayItems.length === 0) {
-        emptyMessage = transactions.some(t => t.type === type) ?
-            '<p class="text-gray">No transactions match your filters</p>' :
-            '<p class="text-gray">No transactions yet</p>';
-    }
-
-    main.innerHTML = `
-    <h2 class="text-xl font-bold mb-4">${type === 'IOU' ? 'I Owe' : 'Owed to Me'}</h2>
-    <div class="flex-between mb-4 flex-wrap gap-2">
-        <div>
-            <label class="align-center flex">
-                <input type="checkbox" id="show-paid" class="mr-2" ${showPaid ? 'checked' : ''}>
-                <span class="text-sm">Show Paid</span>
-            </label>
-        </div>
-    </div>
-    <div class="list">
-      ${listHtml.length > 0 ? listHtml : emptyMessage}
-    </div>
-  `;
+    // ... (keep the rest of the function the same, until the event listener part)
 
     // 5. Add event listeners
     document.getElementById('show-paid').addEventListener('change', (e) => {
@@ -207,7 +165,41 @@ export function renderTransactionList(type) {
         });
     });
 
-    main.querySelectorAll('[data-action]').forEach(el => {
-        el.addEventListener('click', handleTransactionAction);
+    // Delegate all card actions and the new settle group action
+    main.addEventListener('click', (e) => {
+        const targetButton = e.target.closest('[data-action]');
+        if (!targetButton) return;
+
+        const {
+            action,
+            id,
+            groupTag
+        } = targetButton.dataset;
+
+        if (action === 'settle-group') {
+            showGroupSettlementModal(groupTag);
+        } else if (id) {
+            // Re-implement the logic from the old handleTransactionAction
+            const {
+                transactions
+            } = getState();
+            const transaction = transactions.find(t => t.id === id);
+            if (!transaction) return;
+
+            switch (action) {
+                case 'payment':
+                    showPaymentModal(transaction);
+                    break;
+                case 'details':
+                    showTransactionDetails(transaction);
+                    break;
+                case 'edit':
+                    showEditTransactionModal(transaction);
+                    break;
+                case 'delete':
+                    deleteTransaction(id);
+                    break;
+            }
+        }
     });
 }
