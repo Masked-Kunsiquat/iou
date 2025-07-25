@@ -13,6 +13,8 @@ A lightweight, offline-first Progressive Web App (PWA) for tracking money you ow
 * **Statistics Dashboard**: Visual charts and net balance calculations provide a clear overview of your finances.
 * **Import/Export**: You can back up and restore your data using JSON files.
 * **Auto-Updates**: The app automatically notifies you when a new version is available.
+* **Split Expenses**: Easily split a bill among multiple people, and the app will automatically generate the corresponding IOUs.
+
 
 ## 🛠️ Installation
 

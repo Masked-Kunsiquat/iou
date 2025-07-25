@@ -74,3 +74,26 @@ export function closeModal() {
     modalBody.innerHTML = '';
   }
 }
+
+/**
+ * Shows a simple action sheet style modal.
+ * @param {string} title - The title for the action sheet.
+ * @param {Array<{label: string, action: function}>} actions - The actions to display.
+ */
+export function showActionSheet(title, actions) {
+    const actionsHtml = actions.map((action, index) =>
+        `<button class="btn btn-secondary w-full mb-2" data-action-index="${index}">${action.label}</button>`
+    ).join('');
+
+    showModal(title, actionsHtml);
+
+    document.getElementById('modalBody').addEventListener('click', (e) => {
+        const button = e.target.closest('[data-action-index]');
+        if (button) {
+            const index = parseInt(button.dataset.actionIndex, 10);
+            if (actions[index] && typeof actions[index].action === 'function') {
+                actions[index].action();
+            }
+        }
+    });
+}

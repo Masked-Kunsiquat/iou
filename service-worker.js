@@ -45,6 +45,8 @@ const urlsToCache = [
   './features/transactions/transaction-modals.js',
   './features/transactions/transaction-renderer.js',
   './features/transactions/transaction-utils.js',
+  './features/transactions/split-utils.js',
+
 
   // External CDN
   'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js'

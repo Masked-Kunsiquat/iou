@@ -1,14 +1,14 @@
 // core/constants.js
 
 export const VIEWS = {
-  IOU: 'iou',
-  UOM: 'uom',
-  STATS: 'stats',
-  PERSONS: 'persons',
+    IOU: 'iou',
+    UOM: 'uom',
+    STATS: 'stats',
+    PERSONS: 'persons',
 };
 
 export const TRANSACTION_TYPES = {
-  IOU: 'IOU',
-  UOM: 'UOM',
-  SPLIT: 'SPLIT',
+    IOU: 'IOU',
+    UOM: 'UOM',
+    SPLIT: 'SPLIT',
 };

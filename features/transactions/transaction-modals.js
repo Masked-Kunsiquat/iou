@@ -1,12 +1,15 @@
 // features/transactions/transaction-modals.js
 
 import { db } from '../../db.js';
-import { getState } from '../../core/state.js';
+import { getState, setState } from '../../core/state.js';
 import { showModal, closeModal } from '../../ui/modal.js';
 import { deletePayment } from '../actions.js';
 import { calculateBalance } from './transaction-utils.js';
 import { escapeHTML } from '../../ui/html-sanitizer.js';
 import { formatCurrency } from '../../ui/currency.js';
+import { generateIOUs } from './split-utils.js';
+import { TRANSACTION_TYPES } from '../../core/constants.js';
+import { showPersonModal } from '../persons/person-modals.js';
 
 let loadData;
 
@@ -185,6 +188,115 @@ export function showEditTransactionModal(transaction) {
         transaction.date = formData.get('date');
         transaction.dueDate = formData.get('dueDate') || null;
         await db.put('transactions', transaction);
+        await loadData();
+        closeModal();
+    });
+}
+
+/**
+ * Shows the modal for creating a new split expense.
+ */
+export function showSplitExpenseModal() {
+    const {
+        persons
+    } = getState();
+    const personOptions = persons.map(p => {
+        const firstName = escapeHTML(p.firstName || '');
+        const lastName = escapeHTML(p.lastName || '');
+        return `<option value="${p.id}">${firstName} ${lastName}</option>`;
+    }).join('');
+
+    const participantCheckboxes = persons.map(p => `
+        <label class="flex items-center">
+            <input type="checkbox" name="participants" value="${p.id}" class="mr-2">
+            ${escapeHTML(p.firstName)} ${escapeHTML(p.lastName)}
+        </label>
+    `).join('');
+
+    showModal('Split Expense', `
+        <form id="splitExpenseForm">
+            <div class="form-group">
+                <label class="label">Total Amount</label>
+                <input type="number" step="0.01" name="totalAmount" class="input" placeholder="0.00" required>
+            </div>
+            <div class="form-group">
+                <label class="label">Description</label>
+                <input type="text" name="description" class="input" required>
+            </div>
+
+            <div class="form-group">
+                <label class="label">Who Paid?</label>
+                <select name="payerId" class="select" required>
+                    <option value="ME">Me</option>
+                    ${personOptions}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label class="label">Participants</label>
+                <div class="flex flex-col">
+                    <label class="flex items-center">
+                        <input type="checkbox" name="participants" value="ME" class="mr-2"> Me
+                    </label>
+                    ${participantCheckboxes}
+                </div>
+                 <button type="button" id="addNewPersonBtn" class="btn btn-secondary text-sm mt-2">Add New Person</button>
+            </div>
+
+
+            <div class="form-group">
+                <label class="label">How to Split?</label>
+                <select name="splitType" class="select">
+                    <option value="equal">Equally</option>
+                </select>
+            </div>
+
+            <button type="submit" class="btn w-full">Create Split</button>
+        </form>
+    `);
+
+    document.getElementById('addNewPersonBtn').addEventListener('click', () => {
+        showPersonModal();
+    });
+
+
+    document.getElementById('splitExpenseForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const formData = new FormData(e.target);
+        const participantNodes = document.querySelectorAll('[name="participants"]:checked');
+        const participants = Array.from(participantNodes).map(node => node.value);
+
+
+        if (participants.length < 2) {
+            showAlert('Please select at least two participants.');
+            return;
+        }
+
+
+        const splitTransaction = {
+            id: generateUUID(),
+            type: TRANSACTION_TYPES.SPLIT,
+            totalAmount: Math.round(parseFloat(formData.get('totalAmount')) * 100),
+            description: formData.get('description'),
+            date: new Date().toISOString().split('T')[0],
+            payerId: formData.get('payerId'),
+            participants, // Now an array of IDs
+            splitType: formData.get('splitType'),
+        };
+
+        const childTransactions = generateIOUs(splitTransaction);
+
+        const operations = [{
+            type: 'put',
+            storeName: 'transactions',
+            value: splitTransaction
+        }, ...childTransactions.map(t => ({
+            type: 'put',
+            storeName: 'transactions',
+            value: t
+        }))];
+
+        await db.transact(operations);
         await loadData();
         closeModal();
     });
