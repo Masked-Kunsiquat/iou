@@ -123,7 +123,6 @@ export function showTransactionDetails(transaction) {
         return `
         <div class="list-item flex-between">
             <div>
-              {/* Use formatCurrency for the payment amount */}
               <div class="text-sm">${formatCurrency(p.amount)}</div>
               <div class="text-xs text-gray">${new Date(p.date).toLocaleDateString()}</div>
               ${safeNote}
@@ -135,7 +134,6 @@ export function showTransactionDetails(transaction) {
     showModal('Transaction Details', `
     <div class="mb-4"><strong>${safePersonName}</strong><br><span class="text-sm text-gray">${safeDescription}</span></div>
     <div class="mb-4">
-      {/* Use formatCurrency for original amount and balance */}
       <div class="flex-between mb-2"><span>Original Amount:</span><span>${formatCurrency(transaction.amount)}</span></div>
       <div class="flex-between mb-2"><span>Current Balance:</span><span class="font-bold">${formatCurrency(balance)}</span></div>
       <div class="flex-between"><span>Status:</span><span class="${transaction.status === 'paid' ? 'text-green' : ''}">${transaction.status}</span></div>
